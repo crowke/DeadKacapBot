@@ -47,7 +47,7 @@ public class helloWorld extends TelegramLongPollingBot {
         String[] kacapWords2 = {"как", "кто", "никто", "некто", "он", "его", "она", "оно", "они", "их", "еще", "што",
         "пон", "нипон", "непон", "кринж", "какой", "какие", "каких", "нет", "лс", "да", "однако", "пока",
         "сегодня", "и", "иди", "потом", "дашь", "пиздец", "лет", "мне", "ищу", "надо", "мой", "твой", "свои", "свой",
-        "зачем", "тебе", "нужно", "надо"};
+        "зачем", "нужно", "надо"};
         if (update.hasMessage()) {
             Message message = update.getMessage();
             if (message.hasText() && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
