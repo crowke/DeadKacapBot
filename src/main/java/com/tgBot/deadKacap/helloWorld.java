@@ -63,7 +63,7 @@ public class helloWorld extends TelegramLongPollingBot {
                         if (text.contains(kacapWord)) {
                             kacap = true;
                             send = setText("повідомлення видалено через " + (kacapWord.length() <= 2 ? "букву" : "слово")
-                                    + "\"" + kacapWord + "\"", sm, message);
+                                    + " \"" + kacapWord + "\"", sm, message);
                             break;
                         }
                     }
