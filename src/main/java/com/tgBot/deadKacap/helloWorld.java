@@ -62,7 +62,7 @@ public class helloWorld extends TelegramLongPollingBot {
                     for (String kacapWord : kacapWords) {
                         if (text.contains(kacapWord)) {
                             kacap = true;
-                            send = setText("повідомлення видалено через слово " + kacapWord, sm, message);
+                            send = setText("повідомлення видалено через слово \"" + kacapWord + "\"", sm, message);
                             break;
                         }
                     }
@@ -72,7 +72,7 @@ public class helloWorld extends TelegramLongPollingBot {
                             Matcher matcher = pattern.matcher(text);
                                 kacap = matcher.find();
                                 if (kacap) {
-                                    send = setText("повідомлення видалено через слово " + kacapWord2, sm, message);
+                                    send = setText("повідомлення видалено через слово \"" + kacapWord2 + "\"", sm, message);
                                     break;
                                 }
                         }
@@ -89,7 +89,7 @@ public class helloWorld extends TelegramLongPollingBot {
                     }
                     String[] putlerWords = {"путін", "путин", "путлер", "путлєр"};
                     for (String putlerWord : putlerWords) {
-                        send = text.contains(putlerWord) && setText("путін - хуйло! кацапи - нелюди!", sm, message);
+                        send = send || text.contains(putlerWord) && setText("путін - хуйло! кацапи - нелюди!", sm, message);
                         if (send) { break; }
                     }
                     send = send || text.contains("привет")
@@ -110,15 +110,6 @@ public class helloWorld extends TelegramLongPollingBot {
                     + ": " + message.getChat().getTitle() + "; https://t.me/c/"
                     + (chatID > 10_000_000_000L ? chatID - 1_000_000_000_000L : chatID)
                     + "/" + message.getMessageId());
-                }
-            } else if (message.hasText()) {
-                SendMessage sm = new SendMessage();
-                setText("привіт! я не відповідаю в особистих повідомленнях, спробуй мене в групі." +
-                        "\n" + "(боту необхідні права на видалення повідомлень)", sm, message);
-                try {
-                    execute(sm);
-                } catch (TelegramApiException e) {
-                    throw new RuntimeException(e);
                 }
             }
         }
