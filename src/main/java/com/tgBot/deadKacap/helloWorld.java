@@ -60,14 +60,21 @@ public class helloWorld extends TelegramLongPollingBot {
                     send = setText("привіт! я запущений і прямо зараз працюю!", sm, message);
                 } else {
                     for (String kacapWord : kacapWords) {
-                        if (text.contains(kacapWord)) { kacap = true; break; }
+                        if (text.contains(kacapWord)) {
+                            kacap = true;
+                            send = setText("повідомлення видалено через слово " + kacapWord, sm, message);
+                            break;
+                        }
                     }
                     if (!kacap) {
                         for (String kacapWord2 : kacapWords2) {
                             Pattern pattern = Pattern.compile("\\b" + kacapWord2 + "\\b");
                             Matcher matcher = pattern.matcher(text);
                                 kacap = matcher.find();
-                                if (kacap) { break; }
+                                if (kacap) {
+                                    send = setText("повідомлення видалено через слово " + kacapWord2, sm, message);
+                                    break;
+                                }
                         }
                     }
                     if (!kacap) {
