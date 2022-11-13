@@ -39,18 +39,19 @@ public class helloWorld extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        String[] kacapWords = {"э", "ы", "ъ", "ё", "ьі", "привет", "дела", "что", "заебись", "если", "тупой",
+        String[] kacapWords = {"э", "ы", "ъ", "ё", "ьі", "привет", "дела", "что", "заебись", "тупой",
         "слушай", "тебя", "меня", "работ", "свободн", "ебат", "ебет", "здарова", "почему", "ебал", "когда", "только", "почт",
         "русс", "росси", "пидорас", "пидарас", "нихуя", "хуел", "пиздо", "понял", "еблан", "далее", "запрет",
         "меня", "добавь", "другой", "совсем", "понятно", "брос", "освобо", "согл", "хотел", "наверно",
         "мальчик", "девочк", "здрасте", "здравствуй", "надеюс", "вреш", "скольк", "поздр", "разговари", "нрав", "слуша"};
         String[] kacapWords2 = {"как", "кто", "никто", "некто", "он", "его", "она", "оно", "они", "их", "еще", "што",
-        "пон", "нипон", "непон", "кринж", "какой", "какие", "каких", "нет", "однако", "пока",
+        "пон", "нипон", "непон", "кринж", "какой", "какие", "каких", "нет", "однако", "пока", "если",
         "сегодня", "и", "иди", "потом", "дашь", "пиздец", "лет", "мне", "ищу", "надо", "мой", "твой", "свои", "свой",
         "зачем", "нужно", "надо", "всем", "есть"};
         if (update.hasMessage()) {
             Message message = update.getMessage();
-            if (message.hasText() && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
+            if (message.hasText() &&
+                    (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
                 String text = message.getText().toLowerCase();
                 Scanner messc = new Scanner(text);
                 SendMessage sm = new SendMessage(); DeleteMessage dm = new DeleteMessage();
