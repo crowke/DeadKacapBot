@@ -27,7 +27,7 @@ public class helloWorld extends TelegramLongPollingBot {
                 : null;
         if (message != null && message.hasText()
                 && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
-            boolean oneHour = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
+            boolean tenMins = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
             String text = message.getText().toLowerCase();
             Scanner messc = new Scanner(text);
             SendMessage sm = new SendMessage(); DeleteMessage dm = new DeleteMessage();
@@ -42,10 +42,7 @@ public class helloWorld extends TelegramLongPollingBot {
                     execute(dm);
                     kacap = false;
                 }
-                if (send &&
-                        !oneHour) {
-                    execute(sm);
-                    send = false; }
+                if (send && !tenMins) { execute(sm); send = false; }
             } catch (TelegramApiException e) {
                 displayLog(message, e);
             }
