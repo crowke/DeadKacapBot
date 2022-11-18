@@ -27,13 +27,13 @@ public class helloWorld extends TelegramLongPollingBot {
                 : null;
         if (message != null && message.hasText()
                 && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
-            boolean tenMins = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
+            boolean tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
             String text = message.getText().toLowerCase();
-            Scanner messc = new Scanner(text);
+            Scanner mesSc = new Scanner(text);
             SendMessage sm = new SendMessage(); DeleteMessage dm = new DeleteMessage();
-            if (!kacap) { kacapWords1(text, sm, message); }
+            kacapWords1(text, sm, message);
             if (!kacap) { kacapWords2(text, sm, message); }
-            if (!kacap) { rusEng(messc); }
+            if (!kacap) { rusEng(mesSc); }
             checkWords(text, sm, message);
             try {
                 if (kacap) {
@@ -42,7 +42,7 @@ public class helloWorld extends TelegramLongPollingBot {
                     execute(dm);
                     kacap = false;
                 }
-                if (send && !tenMins) { execute(sm); send = false; }
+                if (send && !tenMinutes) { execute(sm); send = false; }
             } catch (TelegramApiException e) {
                 displayLog(message, e);
             }
@@ -75,9 +75,9 @@ public class helloWorld extends TelegramLongPollingBot {
             }
         }
     }
-    public static void rusEng(Scanner messc) {
-        while (messc.hasNext()) {
-            String word = messc.next();
+    public static void rusEng(Scanner mesSc) {
+        while (mesSc.hasNext()) {
+            String word = mesSc.next();
             for (char eng = 97; eng <= 122; eng++) {
                 for (char rus = 1072; rus <= 1103; rus++) {
                     if (word.contains("" + eng) && word.contains("" + rus)) { kacap = true; break; }
@@ -115,7 +115,7 @@ public class helloWorld extends TelegramLongPollingBot {
             "пон", "нипон", "непон", "кринж", "какой", "какие", "каких", "нет", "однако", "пока", "если", "меня",
             "сегодня", "и", "иди", "потом", "дашь", "пиздец", "лет", "мне", "ищу", "надо", "мой", "твой", "свои", "свой",
             "зачем", "нужно", "надо", "всем", "есть", "ебет", "ща", "щя", "щас", "щяс", "либо", "может", "любой", "любая",
-            "че", "чего"};
+            "че", "чего", "где"};
     @Value("${telegram.bot.username}")
     private String username;
     @Value("${telegram.bot.token}")
