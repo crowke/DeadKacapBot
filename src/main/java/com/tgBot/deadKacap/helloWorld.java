@@ -22,25 +22,30 @@ public class helloWorld extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        boolean done = false;
         Message message = update.hasMessage() ? update.getMessage()
                 : update.hasEditedMessage() ? update.getEditedMessage()
                 : null;
-        if (message != null && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
+        if (message != null && message.hasText()
+                && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
+            boolean oneHour = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
             String text = message.getText().toLowerCase();
             Scanner messc = new Scanner(text);
             SendMessage sm = new SendMessage(); DeleteMessage dm = new DeleteMessage();
-            kacapWords1(text, sm, message);
-            kacapWords2(text, sm, message);
-            rusEng(messc);
+            if (!kacap) { kacapWords1(text, sm, message); }
+            if (!kacap) { kacapWords2(text, sm, message); }
+            if (!kacap) { rusEng(messc); }
             checkWords(text, sm, message);
             try {
                 if (kacap) {
                     dm.setChatId(message.getChatId());
                     dm.setMessageId(message.getMessageId());
-                    done = execute(dm);
+                    execute(dm);
+                    kacap = false;
                 }
-                if ((send && kacap && done) || send && !kacap) { execute(sm); }
+                if (send &&
+                        !oneHour) {
+                    execute(sm);
+                    send = false; }
             } catch (TelegramApiException e) {
                 displayLog(message, e);
             }
