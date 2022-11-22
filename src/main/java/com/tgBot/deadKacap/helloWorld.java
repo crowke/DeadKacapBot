@@ -17,24 +17,24 @@ import java.util.regex.Pattern;
 
 @Component
 public class helloWorld extends TelegramLongPollingBot {
-    static boolean kacap = false;
     static boolean send = false;
+    static boolean kacap = false;
+    static SendMessage sm = new SendMessage();
+    static Message message;
+    static String text;
 
     @Override
     public void onUpdateReceived(Update update) {
-        Message message = update.hasMessage() ? update.getMessage()
-                : update.hasEditedMessage() ? update.getEditedMessage()
-                : null;
+        message = update.hasMessage() ? update.getMessage() : update.hasEditedMessage() ? update.getEditedMessage() : null;
         if (message != null && message.hasText()
                 && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
             boolean tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
-            String text = message.getText().toLowerCase();
-            Scanner mesSc = new Scanner(text);
-            SendMessage sm = new SendMessage(); DeleteMessage dm = new DeleteMessage();
-            kacapWords1(text, sm, message);
-            if (!kacap) { kacapWords2(text, sm, message); }
-            if (!kacap) { rusEng(mesSc); }
-            checkWords(text, sm, message);
+            text = message.getText().toLowerCase();
+            DeleteMessage dm = new DeleteMessage();
+            kacapWords1();
+            if (!kacap) { kacapWords2(); }
+            if (!kacap) { rusEng(); }
+            checkWords();
             try {
                 if (kacap) {
                     dm.setChatId(message.getChatId());
@@ -49,43 +49,41 @@ public class helloWorld extends TelegramLongPollingBot {
         }
     }
 
-    public static boolean setText(String text, SendMessage sm, Message message) {
+    public static boolean setText(String text) {
         sm.setText(text);
         sm.setChatId(message.getChatId());
         return true;
     }
-    public static void kacapWords1(String text, SendMessage sm, Message message) {
+    public static void kacapWords1() {
         for (String kacapWord : kacapWords) {
             if (text.contains(kacapWord)) {
                 kacap = true;
                 send = setText("повідомлення видалено через " + (kacapWord.length() <= 2 ? "букву" : "слово")
-                        + " \"" + kacapWord + "\"", sm, message);
+                        + " \"" + kacapWord + "\"");
                 break;
             }
         }
     }
-    public static void kacapWords2(String text, SendMessage sm, Message message) {
+    public static void kacapWords2() {
         for (String kacapWord2 : kacapWords2) {
             Pattern pattern = Pattern.compile("\\b" + kacapWord2 + "\\b");
             Matcher matcher = pattern.matcher(text);
             kacap = matcher.find();
-            if (kacap) {
-                send = setText("повідомлення видалено через слово \"" + kacapWord2 + "\"", sm, message);
-                break;
-            }
+            if (kacap) { send = setText("повідомлення видалено через слово \"" + kacapWord2 + "\""); break; }
         }
     }
-    public static void rusEng(Scanner mesSc) {
+    public static void rusEng() {
+        Scanner mesSc = new Scanner(text);
         while (mesSc.hasNext()) {
             String word = mesSc.next();
             for (char eng = 97; eng <= 122; eng++) {
                 for (char rus = 1072; rus <= 1103; rus++) {
-                    if (word.contains("" + eng + rus)) { kacap = true; break; }
+                    if (word.contains("" + rus + eng) || word.contains("" + eng + rus)) { kacap = true; break; }
                 }
             }
         }
     }
-    public static void checkWords(String text, SendMessage sm, Message message) {
+    public static void checkWords() {
         String[] inputs = {"/start", "/start@deadkacapbot", "слава Україні".toLowerCase(), "слава нації",
                 "путін", "путин", "путлер", "путлєр"};
         String[] outputs = {"привіт! я запущений і прямо зараз працюю!", "героям слава!", "смерть кацапам!",
@@ -93,7 +91,7 @@ public class helloWorld extends TelegramLongPollingBot {
         int j = 0;
         for (int i = 0; i < inputs.length; i++) {
             j += (i < 2 || i > 4 ? 0 : 1);
-            send = text.contains(inputs[i]) ? setText(outputs[j], sm, message) : send;
+            send = text.contains(inputs[i]) ? setText(outputs[j]) : send;
         }
     }
     public static void displayLog(Message message, Exception e) {
@@ -109,13 +107,13 @@ public class helloWorld extends TelegramLongPollingBot {
             "слушай", "тебя", "работ", "свободн", "ебат", "здарова", "почему", "ебал", "когда", "только", "почт",
             "пример", "русс", "росси", "пидорас", "пидарас", "нихуя", "хуел", "пиздо", "понял", "еблан", "далее",
             "запрет", "меня", "добавь", "другой", "совсем", "понятно", "брос", "освобо", "согл", "хотел", "наверно",
-            "хуеть", "игра", "мальчик", "девочк", "здрасте", "здравствуй", "надеюс", "вреш", "скольк", "поздр",
+            "хуеть", "мальчик", "девочк", "здрасте", "здравствуй", "надеюс", "вреш", "скольк", "поздр",
             "разговари", "нрав", "слуша", "двое", "трое", "сейчас"};
     static String[] kacapWords2 = {"как", "кто", "никто", "некто", "он", "его", "она", "оно", "они", "их", "еще", "што",
             "пон", "нипон", "непон", "кринж", "какой", "какие", "каких", "нет", "однако", "пока", "если", "меня",
             "сегодня", "и", "иди", "потом", "дашь", "пиздец", "лет", "мне", "ищу", "надо", "мой", "твой", "свои", "свой",
             "зачем", "нужно", "надо", "всем", "есть", "ебет", "ща", "щя", "щас", "щяс", "либо", "может", "любой", "любая",
-            "че", "чего", "где"};
+            "че", "чего", "где", "игра", "играть", "играю"};
     @Value("${telegram.bot.username}")
     private String username;
     @Value("${telegram.bot.token}")
