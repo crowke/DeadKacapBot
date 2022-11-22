@@ -80,7 +80,7 @@ public class helloWorld extends TelegramLongPollingBot {
             String word = mesSc.next();
             for (char eng = 97; eng <= 122; eng++) {
                 for (char rus = 1072; rus <= 1103; rus++) {
-                    if (word.contains("" + eng) && word.contains("" + rus)) { kacap = true; break; }
+                    if (word.contains("" + eng + rus)) { kacap = true; break; }
                 }
             }
         }
