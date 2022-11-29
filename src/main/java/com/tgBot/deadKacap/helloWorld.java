@@ -9,6 +9,10 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
@@ -31,10 +35,26 @@ public class helloWorld extends TelegramLongPollingBot {
             boolean tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
             text = message.getText().toLowerCase();
             DeleteMessage dm = new DeleteMessage();
+            StringBuilder log = new StringBuilder();
+            log.append("\n").append(text).append("\n");
+            int i = 0;
+            log.append(setLog(++i));
             kacapWords1();
+            log.append(setLog(++i));
             if (!kacap) { kacapWords2(); }
-            //if (!kacap) { rusEng(); }
+            log.append(setLog(++i));
+            if (!kacap) { rusEng(); }
+            log.append(setLog(++i));
             checkWords();
+            log.append(setLog(++i));
+            if (log.toString().contains("true")) {
+                System.out.print(log);
+                try {
+                    Files.write(Path.of("log.txt"), log.toString().getBytes(), StandardOpenOption.APPEND);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
             try {
                 if (kacap) {
                     dm.setChatId(message.getChatId());
@@ -44,7 +64,7 @@ public class helloWorld extends TelegramLongPollingBot {
                 }
                 if (send && !tenMinutes) { execute(sm); send = false; }
             } catch (TelegramApiException e) {
-                displayLog(message, e);
+                displayWriteLog(message, e);
             }
         }
     }
@@ -94,14 +114,24 @@ public class helloWorld extends TelegramLongPollingBot {
             send = text.contains(inputs[i]) ? setText(outputs[j]) : send;
         }
     }
-    public static void displayLog(Message message, Exception e) {
+    public static String setLog(int num) {
+        return kacap || send ? num + " " + kacap + " " + send + "\n" : "";
+    }
+    public static void displayWriteLog(Message message, Exception e) {
         long chatID = Math.abs(message.getChatId());
-        System.out.println("[" + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "] "
+        String error = "[" + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "] "
                 + (e.getMessage().contains("message can't be deleted")
                 ? "повідомлення не може бути видалене" : e.getMessage())
                 + ": " + message.getChat().getTitle() + "; https://t.me/c/"
                 + (chatID > 10_000_000_000L ? chatID - 1_000_000_000_000L : chatID)
-                + "/" + message.getMessageId());
+                + "/" + message.getMessageId() + "\n";
+
+        System.out.print(error);
+        try {
+            Files.write(Path.of("log.txt"), error.getBytes(), StandardOpenOption.APPEND);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
     static String[] kacapWords = {"э", "ы", "ъ", "ё", "ьі", "привет", "дела", "что", "заебись", "тупой", "спасибо",
             "слушай", "тебя", "работ", "свободн", "ебат", "здарова", "почему", "ебал", "когда", "только", "почт",
