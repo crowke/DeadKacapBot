@@ -24,8 +24,10 @@ public class helloWorld extends TelegramLongPollingBot {
     static boolean send = false;
     static boolean kacap = false;
     static SendMessage sm = new SendMessage();
+    static DeleteMessage dm = new DeleteMessage();
     static Message message;
     static String text;
+    static StringBuilder log = new StringBuilder();
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -34,8 +36,7 @@ public class helloWorld extends TelegramLongPollingBot {
                 && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
             boolean tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
             text = message.getText().toLowerCase();
-            DeleteMessage dm = new DeleteMessage();
-            StringBuilder log = new StringBuilder();
+            log.setLength(0);
             log.append("\n").append(text).append("\n");
             int i = 0;
             log.append(setLog(++i));
