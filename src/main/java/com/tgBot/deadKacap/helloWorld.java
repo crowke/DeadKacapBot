@@ -33,7 +33,7 @@ public class helloWorld extends TelegramLongPollingBot {
             DeleteMessage dm = new DeleteMessage();
             kacapWords1();
             if (!kacap) { kacapWords2(); }
-            if (!kacap) { rusEng(); }
+            //if (!kacap) { rusEng(); }
             checkWords();
             try {
                 if (kacap) {
