@@ -61,12 +61,13 @@ public class helloWorld extends TelegramLongPollingBot {
                     dm.setChatId(message.getChatId());
                     dm.setMessageId(message.getMessageId());
                     execute(dm);
-                    kacap = false;
                 }
-                if (send && !tenMinutes) { execute(sm); send = false; }
+                if (send && !tenMinutes) { execute(sm); }
             } catch (TelegramApiException e) {
                 displayWriteLog(message, e);
             }
+            kacap = false;
+            send = false;
         }
     }
 
