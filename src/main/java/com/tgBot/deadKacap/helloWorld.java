@@ -48,7 +48,7 @@ public class helloWorld extends TelegramLongPollingBot {
             log.append(setLog(++i));
             checkWords();
             log.append(setLog(++i));
-            if (log.toString().contains("true")) {
+            if (log.substring(log.indexOf("\n")+1).contains("true")) {
                 System.out.print(log);
                 try {
                     Files.write(Path.of("log.txt"), log.toString().getBytes(), StandardOpenOption.APPEND);
@@ -120,14 +120,17 @@ public class helloWorld extends TelegramLongPollingBot {
         return kacap || send ? num + " " + kacap + " " + send + "\n" : "";
     }
     public static void displayWriteLog(Message message, Exception e) {
+        String[] errors = {"message can't be deleted", "message to delete not found", "have no rights to send a message"};
+        String[] answers = {"повідомлення не може бути видалене", "повідомлення не знайдено", "немає прав для видалення"};
+        String answer = e.getMessage();
+        for (int i = 0; i < errors.length; i++) {
+            if (e.getMessage().contains(errors[i])) { answer = answers[i]; }
+        }
         long chatID = Math.abs(message.getChatId());
         String error = "[" + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "] "
-                + (e.getMessage().contains("message can't be deleted")
-                ? "повідомлення не може бути видалене" : e.getMessage())
-                + ": " + message.getChat().getTitle() + "; https://t.me/c/"
+                + answer + ": " + message.getChat().getTitle() + "; https://t.me/c/"
                 + (chatID > 10_000_000_000L ? chatID - 1_000_000_000_000L : chatID)
                 + "/" + message.getMessageId() + "\n";
-
         System.out.print(error);
         try {
             Files.write(Path.of("log.txt"), error.getBytes(), StandardOpenOption.APPEND);
