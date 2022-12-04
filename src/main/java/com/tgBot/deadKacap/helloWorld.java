@@ -33,7 +33,7 @@ public class helloWorld extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         message = update.hasMessage() ? update.getMessage() : update.hasEditedMessage() ? update.getEditedMessage() : null;
         if (message != null && message.hasText()
-                && (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat())) {
+                && (message.getChat().isSuperGroupChat() || message.getChat().isGroupChat())) {
             boolean tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
             text = message.getText().toLowerCase();
             log.setLength(0);
@@ -148,7 +148,7 @@ public class helloWorld extends TelegramLongPollingBot {
             "пон", "нипон", "непон", "кринж", "какой", "какие", "каких", "нет", "однако", "пока", "если", "меня",
             "сегодня", "и", "иди", "потом", "дашь", "пиздец", "лет", "мне", "ищу", "надо", "мой", "твой", "свои", "свой",
             "зачем", "нужно", "надо", "всем", "есть", "ебет", "ща", "щя", "щас", "щяс", "либо", "может", "любой", "любая",
-            "че", "чего", "где", "игра", "играть", "играю", "двое", "трое", "хорошо"};
+            "че", "чего", "где", "игра", "играть", "играю", "двое", "трое", "хорошо", "улиц", "улица", "улице"};
     @Value("${telegram.bot.username}")
     private String username;
     @Value("${telegram.bot.token}")
