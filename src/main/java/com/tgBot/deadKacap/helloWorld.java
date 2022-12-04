@@ -48,7 +48,7 @@ public class helloWorld extends TelegramLongPollingBot {
             log.append(setLog(++i));
             if (!send) { checkWords(); }
             log.append(setLog(++i));
-            if (log.substring(log.indexOf("\n")+1).contains("true")) {
+            if (log.substring(log.indexOf("\n")+1).contains(" true")) {
                 System.out.print(log);
                 try {
                     Files.write(Path.of("log.txt"), log.toString().getBytes(), StandardOpenOption.APPEND);
@@ -62,12 +62,12 @@ public class helloWorld extends TelegramLongPollingBot {
                     dm.setMessageId(message.getMessageId());
                     execute(dm);
                 }
-                if (send && !tenMinutes) { execute(sm); sm = new SendMessage(); }
+                if (send && !tenMinutes) { execute(sm); }
             } catch (TelegramApiException e) {
                 displayWriteLog(message, e);
             }
-            kacap = false;
-            send = false;
+            if (kacap) { dm = new DeleteMessage(); kacap = false; }
+            if (send) { sm = new SendMessage(); send = false; }
         }
     }
 
@@ -106,26 +106,35 @@ public class helloWorld extends TelegramLongPollingBot {
         }
     }
     public static void checkWords() {
-        String[] inputs = {"/start", "/start@deadkacapbot", "слава Україні".toLowerCase(), "слава нації",
-                "путін", "путин", "путлер", "путлєр"};
-        String[] outputs = {"привіт! я запущений і прямо зараз працюю!", "героям слава!", "смерть кацапам!",
-                "путін - хуйло! кацапи - нелюди!"};
+        String[] inputsEquals = {"/start", "/start@deadkacapbot"};
+        String[] outputsEquals = {"привіт! я запущений і прямо зараз працюю!"};
         int j = 0;
-        for (int i = 0; i < inputs.length; i++) {
+        for (int i = 0; i < inputsEquals.length; i++) {
+            //j += шось там;
+            send = text.equals(inputsEquals[i]) ? setText(outputsEquals[j]) : send;
+        }
+        String[] inputsContains = {"/start", "/start@deadkacapbot", "слава Україні".toLowerCase(), "слава нації",
+                "путін", "путин", "путлер", "путлєр"};
+        String[] outputsContains = {"привіт! я запущений і прямо зараз працюю!", "героям слава!", "смерть кацапам!",
+                "путін - хуйло! кацапи - нелюди!"};
+        //j = 0;
+        for (int i = 0; i < inputsContains.length; i++) {
             j += (i < 2 || i > 4 ? 0 : 1);
-            send = text.contains(inputs[i]) ? setText(outputs[j]) : send;
-            if (send) {
-                sm.setReplyMarkup(sm.getReplyMarkup());
-                sm.setReplyToMessageId(message.getMessageId());
-            }
+            send = text.contains(inputsContains[i]) ? setText(outputsContains[j]) : send;
+        }
+        if (send) {
+            sm.setReplyMarkup(sm.getReplyMarkup());
+            sm.setReplyToMessageId(message.getMessageId());
         }
     }
     public static String setLog(int num) {
         return kacap || send ? num + " " + kacap + " " + send + "\n" : "";
     }
     public static void displayWriteLog(Message message, Exception e) {
-        String[] errors = {"message can't be deleted", "message to delete not found", "have no rights to send a message"};
-        String[] answers = {"повідомлення не може бути видалене", "повідомлення не знайдено", "немає прав для видалення"};
+        String[] errors = {"message can't be deleted", "message to delete not found", "have no rights to send a message",
+        "replied message not found"};
+        String[] answers = {"повідомлення не може бути видалене", "повідомлення не знайдено", "немає прав для відправлення",
+        "повідомлення для відповіді не знайдене"};
         String answer = e.getMessage();
         for (int i = 0; i < errors.length; i++) {
             if (e.getMessage().contains(errors[i])) { answer = answers[i]; }
@@ -142,13 +151,13 @@ public class helloWorld extends TelegramLongPollingBot {
             throw new RuntimeException(ex);
         }
     }
-    static String[] kacapWords = ("э ы ъ ё ьі привет дела что заебись тупой спасибо слушай тебя работ свободн ебат " +
+    static String[] kacapWords = ("э ы ъ ё ьі привет дела что заебись тупой спасибо слушай тебя работ свободн ебат" +
             "здарова почему ебал когда только почт пример русс росси пидорас пидарас нихуя хуел понял еблан далее" +
-            "запрет меня добавь другой совсем понятно брос освобо согл хотел наверно хуеть мальчик девочк здрасте " +
+            "запрет меня добавь другой совсем понятно брос освобо согл хотел наверно хуеть мальчик девочк здрасте" +
             "здравствуй надеюс вреш скольк поздр разговари нрав слуша сейчас удобн").split(" ");
     static String[] kacapWords2 = ("как кто никто некто он его она оно они их еще што пон нипон непон кринж какой какие" +
             "каких нет однако пока если меня сегодня и иди потом дашь пиздец лет мне ищу надо мой твой свои свой" +
-            "зачем нужно надо всем есть ебет ща щя щас щяс либо может любой любая че чего где игра играть играю " +
+            "зачем нужно надо всем есть ебет ща щя щас щяс либо может любой любая че чего где игра играть играю" +
             "двое трое хорошо улиц улица улице пиздос").split(" ");
     @Value("${telegram.bot.username}")
     private String username;
