@@ -113,6 +113,8 @@ public class helloWorld extends TelegramLongPollingBot {
         int j = 0;
         for (int i = 0; i < inputs.length; i++) {
             j += (i < 2 || i > 4 ? 0 : 1);
+            sm.setReplyMarkup(sm.getReplyMarkup());
+            sm.setReplyToMessageId(message.getMessageId());
             send = text.contains(inputs[i]) ? setText(outputs[j]) : send;
         }
     }
