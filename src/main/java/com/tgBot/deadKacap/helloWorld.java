@@ -46,7 +46,7 @@ public class helloWorld extends TelegramLongPollingBot {
             log.append(setLog(++i));
             if (!kacap) { rusEng(); }
             log.append(setLog(++i));
-            checkWords();
+            if (!send) { checkWords(); }
             log.append(setLog(++i));
             if (log.substring(log.indexOf("\n")+1).contains("true")) {
                 System.out.print(log);
@@ -62,7 +62,7 @@ public class helloWorld extends TelegramLongPollingBot {
                     dm.setMessageId(message.getMessageId());
                     execute(dm);
                 }
-                if (send && !tenMinutes) { execute(sm); }
+                if (send && !tenMinutes) { execute(sm); sm = new SendMessage(); }
             } catch (TelegramApiException e) {
                 displayWriteLog(message, e);
             }
@@ -113,9 +113,11 @@ public class helloWorld extends TelegramLongPollingBot {
         int j = 0;
         for (int i = 0; i < inputs.length; i++) {
             j += (i < 2 || i > 4 ? 0 : 1);
-            sm.setReplyMarkup(sm.getReplyMarkup());
-            sm.setReplyToMessageId(message.getMessageId());
             send = text.contains(inputs[i]) ? setText(outputs[j]) : send;
+            if (send) {
+                sm.setReplyMarkup(sm.getReplyMarkup());
+                sm.setReplyToMessageId(message.getMessageId());
+            }
         }
     }
     public static String setLog(int num) {
