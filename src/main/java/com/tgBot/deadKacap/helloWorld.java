@@ -66,8 +66,8 @@ public class helloWorld extends TelegramLongPollingBot {
             } catch (TelegramApiException e) {
                 displayWriteLog(message, e);
             }
-            if (kacap) { dm = new DeleteMessage(); kacap = false; }
-            if (send) { sm = new SendMessage(); send = false; }
+            if (kacap) { kacap = false; dm = new DeleteMessage(); }
+            if (send) { send = false; sm = new SendMessage(); }
         }
     }
 
@@ -154,7 +154,7 @@ public class helloWorld extends TelegramLongPollingBot {
     static String[] kacapWords = ("э ы ъ ё ьі привет дела что заебись тупой спасибо слушай тебя работ свободн ебат" +
             "здарова почему ебал когда только почт пример русс росси пидорас пидарас нихуя хуел понял еблан далее" +
             "запрет меня добавь другой совсем понятно брос освобо согл хотел наверно хуеть мальчик девочк здрасте" +
-            "здравствуй надеюс вреш скольк поздр разговари нрав слуша сейчас удобн").split(" ");
+            "здравствуй надеюс вреш скольк поздр разговари нрав слуша сейчас удобн смотр").split(" ");
     static String[] kacapWords2 = ("как кто никто некто он его она оно они их еще што пон нипон непон кринж какой какие" +
             "каких нет однако пока если меня сегодня и иди потом дашь пиздец лет мне ищу надо мой твой свои свой" +
             "зачем нужно надо всем есть ебет ща щя щас щяс либо может любой любая че чего где игра играть играю" +
