@@ -48,7 +48,7 @@ public class helloWorld extends TelegramLongPollingBot {
             log.append(setLog(++i));
             if (!send) { checkWords(); }
             log.append(setLog(++i));
-            if (log.substring(log.indexOf("\n")+1).contains(" true")) {
+            if (log.substring(log.indexOf("\n")+1).contains(" true") && message.getChat().getUserName() != null) {
                 System.out.print(log);
                 try {
                     Files.write(Path.of("log.txt"), log.toString().getBytes(), StandardOpenOption.APPEND);
