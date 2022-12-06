@@ -32,10 +32,12 @@ public class helloWorld extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         message = update.hasMessage() ? update.getMessage() : update.hasEditedMessage() ? update.getEditedMessage() : null;
-        if (message != null && message.hasText()
+        if (message != null && (message.hasText() || message.getCaption() != null)
                 && (message.getChat().isSuperGroupChat() || message.getChat().isGroupChat())) {
             boolean tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
-            text = message.getText().toLowerCase();
+            text = (message.getText() != null ? message.getText()
+                    : message.getCaption() != null ? message.getCaption() : "")
+                    .toLowerCase();
             log.setLength(0);
             log.append("\n").append(text).append("\n");
             int i = 0;
@@ -71,8 +73,8 @@ public class helloWorld extends TelegramLongPollingBot {
         }
     }
 
-    public static boolean setText(String text) {
-        sm.setText(text);
+    public static boolean setText(String answer) {
+        sm.setText(answer);
         sm.setChatId(message.getChatId());
         return true;
     }
@@ -100,7 +102,11 @@ public class helloWorld extends TelegramLongPollingBot {
             String word = mesSc.next();
             for (char eng = 97; eng <= 122; eng++) {
                 for (char rus = 1072; rus <= 1103; rus++) {
-                    if (word.contains("" + rus + eng) || word.contains("" + eng + rus)) { kacap = true; break; }
+                    if (word.contains("" + rus + eng) || word.contains("" + eng + rus)) {
+                        kacap = true;
+                        send = setText("повідомлення видалено через заміну в слові кирилиці на англійські букви");
+                        break;
+                    }
                 }
             }
         }
@@ -153,15 +159,16 @@ public class helloWorld extends TelegramLongPollingBot {
     }
     static String[] kacapWords = ("э ы ъ ё ьі " +
             "заебись ебат ебал тупой пидорас пидарас нихуя хуел еблан хуеть " +
-            "привет здаров здравствуй спасибо слушай тебя работ свободн " +
+            "привет здаров здравствуй спасибо слуша работ свободн " +
             "почему тогда когда только почт пример русс росси понял далее " +
-            "запрет меня добавь другой совсем понятно брос освобо согл хотел наверно мальчик девочк здрасте " +
-            "надеюс вреш скольк поздр разговари нрав слуша удобн смотр общ помог ").split(" ");
+            "запрет добавь другой совсем понятно брос освобо согл хотел наверн мальчик девочк здрасте " +
+            "надеюс вреш скольк поздр разговари нрав слуша удобн смотр общ ").split(" ");
     static String[] kacapWords2 = ("как кто никто некто он его она оно они их еще что што пон нипон непон кринж " +
-            "какой какие каких нет однако пока если меня сегодня и иди потом дашь пиздец лет мне ищу надо мой твой " +
+            "какой какие каких нет однако пока если меня тебя сегодня и иди потом дашь пиздец лет мне ищу надо мой твой " +
             "свои свой зачем нужно надо всем есть ебет сейчас ща щя щас щяс либо может любой любая че чего где везде " +
             "игра играть играю двое трое хорошо улиц улица улице пиздос пошел пошла дела дело ваще срочно " +
-            "жду ждать ждешь даже ребята пожалуйста вдруг ").split(" ");
+            "жду ждать ждешь даже ребята пожалуйста вдруг помоги помогите помощь помог помогла").split(" ");
+
     @Value("${telegram.bot.username}")
     private String username;
     @Value("${telegram.bot.token}")
