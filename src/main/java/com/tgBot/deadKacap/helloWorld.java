@@ -3,13 +3,14 @@ package com.tgBot.deadKacap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatAdministrators;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -23,39 +24,57 @@ import java.util.regex.Pattern;
 public class helloWorld extends TelegramLongPollingBot {
     static boolean send = false;
     static boolean kacap = false;
+    static boolean enabled = true;
     static SendMessage sm = new SendMessage();
     static DeleteMessage dm = new DeleteMessage();
+    static String toggle;
     static Message message;
     static String text;
     static StringBuilder log = new StringBuilder();
 
     @Override
     public void onUpdateReceived(Update update) {
+        try {
+            toggle = new Scanner(new FileReader("config.txt")).nextLine();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         message = update.hasMessage() ? update.getMessage() : update.hasEditedMessage() ? update.getEditedMessage() : null;
-        if (message != null && (message.hasText() || message.getCaption() != null)
-                && (message.getChat().isSuperGroupChat() || message.getChat().isGroupChat())) {
-            boolean tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
+        if (message != null) {
             text = (message.getText() != null ? message.getText()
                     : message.getCaption() != null ? message.getCaption() : "")
                     .toLowerCase();
-            log.setLength(0);
-            log.append("\n").append(text).append("\n");
-            int i = 0;
-            log.append(setLog(++i));
-            kacapWords1();
-            log.append(setLog(++i));
-            if (!kacap) { kacapWords2(); }
-            log.append(setLog(++i));
-            if (!kacap) { rusEng(); }
-            log.append(setLog(++i));
-            if (!send) { checkWords(); }
-            log.append(setLog(++i));
-            if (log.substring(log.indexOf("\n")+1).contains(" true") && message.getChat().getUserName() != null) {
-                System.out.print(log);
-                try {
-                    Files.write(Path.of("log.txt"), log.toString().getBytes(), StandardOpenOption.APPEND);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+            enabled = !toggle.contains(message.getChatId() + "");
+            final boolean[] isAdmin = {false};
+            try {
+                execute(new GetChatAdministrators(message.getChatId() + "")).forEach(chatMember1 -> {
+                    if (message.getFrom().getId().equals(chatMember1.getUser().getId())) {
+                        isAdmin[0] = true;
+                    }
+                });
+            } catch (TelegramApiException e) {
+                throw new RuntimeException(e);
+            }
+            if (text.startsWith("/toggle") && isAdmin[0]) { setCommands(); }
+            boolean tenMinutes = false;
+            if (enabled && (message.hasText() || message.getCaption() != null)
+                    && (message.getChat().isSuperGroupChat() || message.getChat().isGroupChat())) {
+                tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
+                log.setLength(0);
+                log.append("\n").append(text).append("\n");
+                int i = 0;
+                log.append(setLog(++i));
+                kacapWords1();
+                log.append(setLog(++i));
+                if (!kacap) { kacapWords2(); }
+                log.append(setLog(++i));
+                if (!kacap) { rusEng(); }
+                log.append(setLog(++i));
+                if (!send) { checkWords(); }
+                log.append(setLog(++i));
+                if (log.substring(log.indexOf("\n") + 1).contains(" true") && message.getChat().getUserName() != null) {
+                    System.out.print(log);
+                    append("log.txt", log.toString());
                 }
             }
             try {
@@ -77,6 +96,26 @@ public class helloWorld extends TelegramLongPollingBot {
         sm.setText(answer);
         sm.setChatId(message.getChatId());
         return true;
+    }
+    public static void append(String file, String input) {
+        try {
+            Files.write(Path.of(file), input.getBytes(), StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public static void setCommands() {
+        try (FileWriter fw = new FileWriter("config.txt")) {
+            if (enabled) {
+                fw.write(toggle + message.getChatId());
+                send = setText("бота вимкнено в чаті! щоб увімкнути знову: /toggle");
+            } else {
+                fw.write(toggle.replace(message.getChatId() + "", ""));
+                send = setText("бота ввімкнено в чаті! щоб вимкнути знову: /toggle");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
     public static void kacapWords1() {
         for (String kacapWord : kacapWords) {
@@ -145,11 +184,10 @@ public class helloWorld extends TelegramLongPollingBot {
         for (int i = 0; i < errors.length; i++) {
             if (e.getMessage().contains(errors[i])) { answer = answers[i]; }
         }
-        long chatID = Math.abs(message.getChatId());
         String error = "[" + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "] "
-                + answer + ": " + message.getChat().getTitle() + "; https://t.me/c/"
-                + (chatID > 10_000_000_000L ? chatID - 1_000_000_000_000L : chatID)
-                + "/" + message.getMessageId() + "\n";
+                + answer + ": " + message.getChat().getTitle() +
+                (message.getChat().getUserName() != null ? "; https://t.me/" + message.getChat().getUserName()
+                + "/" + message.getMessageId() : "") + "\n";
         System.out.print(error);
         try {
             Files.write(Path.of("log.txt"), error.getBytes(), StandardOpenOption.APPEND);
@@ -162,13 +200,12 @@ public class helloWorld extends TelegramLongPollingBot {
             "привет здаров здравствуй спасибо слуша работ свободн " +
             "почему тогда когда только почт пример русс росси понял далее " +
             "запрет добавь другой совсем понятно брос освобо согл хотел наверн мальчик девочк здрасте " +
-            "надеюс вреш скольк поздр разговари нрав слуша удобн смотр общ ").split(" ");
+            "надеюс вреш скольк поздр разговари нрав слуша удобн смотр общ админ ").split(" ");
     static String[] kacapWords2 = ("как кто никто некто он его она оно они их еще что што пон нипон непон кринж " +
             "какой какие каких нет однако пока если меня тебя сегодня и иди потом дашь пиздец лет мне ищу надо мой твой " +
             "свои свой зачем нужно надо всем есть ебет сейчас ща щя щас щяс либо может любой любая че чего где везде " +
             "игра играть играю двое трое хорошо улиц улица улице пиздос пошел пошла дела дело ваще срочно " +
-            "жду ждать ждешь даже ребята пожалуйста вдруг помоги помогите помощь помог помогла").split(" ");
-
+            "жду ждать ждешь даже ребята пожалуйста вдруг помоги помогите помощь помог помогла хуже ").split(" ");
     @Value("${telegram.bot.username}")
     private String username;
     @Value("${telegram.bot.token}")
