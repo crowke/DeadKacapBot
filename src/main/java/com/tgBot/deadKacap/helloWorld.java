@@ -196,8 +196,8 @@ public class helloWorld extends TelegramLongPollingBot {
         "путін", "путин", "путлер", "путлєр"};
         String[] outputsContains = {"героям слава!", "смерть кацапам!", "путін - хуйло! кацапи - нелюди!"};
         for (int i = 0; i < inputsContains.length; i++) {
-            j += (i < 2 || i > 4 ? 0 : 1);
             send = text.contains(inputsContains[i]) ? setText(outputsContains[j]) : send;
+            j += (i > 1 ? 0 : 1);
         }
         if (send) {
             sm.setReplyMarkup(sm.getReplyMarkup());
