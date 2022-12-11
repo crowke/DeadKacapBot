@@ -119,7 +119,8 @@ public class helloWorld extends TelegramLongPollingBot {
     public static void setCommands() {
     	if (equalsCommand("start")) {
     		send = setText("привіт! я запущений і прямо зараз працюю!" 
-    			+ (!enabled ? "\nбота вимкнено! щоб увімкнути: /toggle" : ""));
+    			+ (!enabled ? "\nбота вимкнено! щоб увімкнути: /toggle" : "доступні команди:\n" +
+                    "/toggle - увімкнути/вимкнути бота\n/exclude - виключити непотрібні слова"));
     	} else if (equalsCommand("toggle")) {
         	try (FileWriter fw = new FileWriter("config.txt")) {
             	fw.write(enabled ? toggle + message.getChatId() : toggle.replace(message.getChatId() + "", ""));
@@ -197,7 +198,7 @@ public class helloWorld extends TelegramLongPollingBot {
         String[] outputsContains = {"героям слава!", "смерть кацапам!", "путін - хуйло! кацапи - нелюди!"};
         for (int i = 0; i < inputsContains.length; i++) {
             send = text.contains(inputsContains[i]) ? setText(outputsContains[j]) : send;
-            j += (i > 1 ? 0 : 1);
+            j += i > 1 ? 0 : 1;
         }
         if (send) {
             sm.setReplyMarkup(sm.getReplyMarkup());
