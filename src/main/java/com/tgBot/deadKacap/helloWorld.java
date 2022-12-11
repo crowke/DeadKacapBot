@@ -119,7 +119,7 @@ public class helloWorld extends TelegramLongPollingBot {
     public static void setCommands() {
     	if (equalsCommand("start")) {
     		send = setText("привіт! я запущений і прямо зараз працюю!" 
-    			+ (!enabled ? "\nбота вимкнено! щоб увімкнути: /toggle" : "доступні команди:\n" +
+    			+ (!enabled ? "\nбота вимкнено! щоб увімкнути: /toggle" : "\nдоступні команди:\n" +
                     "/toggle - увімкнути/вимкнути бота\n/exclude - виключити непотрібні слова"));
     	} else if (equalsCommand("toggle")) {
         	try (FileWriter fw = new FileWriter("config.txt")) {
