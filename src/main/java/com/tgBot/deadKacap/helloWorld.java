@@ -125,7 +125,7 @@ public class helloWorld extends TelegramLongPollingBot {
         	try (FileWriter fw = new FileWriter("config.txt")) {
             	fw.write(enabled ? toggle + message.getChatId() : toggle.replace(message.getChatId() + "", ""));
             	send = setText("бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! " +
-            		"щоб " + (enabled ? "вимкнути" : "увімкнути") + " знову: /toggle");
+            		"щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle");
         	} catch (IOException e) {
             	throw new RuntimeException(e);
         	}
