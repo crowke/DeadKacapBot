@@ -26,21 +26,24 @@ public class helloWorld extends TelegramLongPollingBot {
     static boolean send = false;
     static boolean kacap = false;
     static boolean enabled = true;
+    static boolean isForward = false;
+    static boolean forwardEnabled = true;
     static SendMessage sm = new SendMessage();
     static DeleteMessage dm = new DeleteMessage();
     static String text;
     static String toggle;
-    static StringBuilder excludeStr = new StringBuilder();
+    static String forward;
+    static StringBuilder exclude = new StringBuilder();
     static StringBuilder log = new StringBuilder();
 
     @Override
     public void onUpdateReceived(Update update) {
         try (Scanner toggleSc = new Scanner(new FileReader("config.txt")); 
-        	Scanner excludeSc = new Scanner(new FileReader("exclude.txt"))) {
+        	Scanner excludeSc = new Scanner(new FileReader("exclude.txt"));
+            Scanner forwardSc = new Scanner(new FileReader("forward.txt"))) {
         		toggle = toggleSc.hasNext() ? toggleSc.nextLine() : "";
-        		while (excludeSc.hasNext()) {
-        			excludeStr.append(excludeSc.nextLine()).append("\n");
-        		}
+                forward = forwardSc.hasNext() ? forwardSc.nextLine() : "";
+        		while (excludeSc.hasNext()) { exclude.append(excludeSc.nextLine()).append("\n"); }
         	} catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
         }
@@ -51,12 +54,14 @@ public class helloWorld extends TelegramLongPollingBot {
                     : message.getCaption() != null ? message.getCaption() : "")
                     .toLowerCase();
             enabled = !toggle.contains(message.getChatId() + "");
-            if (excludeStr.toString().contains(message.getChatId() + "")) {
-                int index = excludeStr.indexOf(message.getChatId() + "");
-                String cropped = excludeStr.substring(index,
-                        excludeStr.substring(index).contains("\n")
-                                ? excludeStr.substring(index).indexOf("\n") + excludeStr.substring(0, index).length()
-                                : excludeStr.length());
+            isForward = message.getForwardDate() != null;
+            forwardEnabled = !forward.contains(message.getChatId() + "");
+            if (exclude.toString().contains(message.getChatId() + "")) {
+                int index = exclude.indexOf(message.getChatId() + "");
+                String cropped = exclude.substring(index,
+                        exclude.substring(index).contains("\n")
+                                ? exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length()
+                                : exclude.length());
                 String[] excl = cropped.replace(message.getChatId() + " ", "").split(" ");
                 for (String exc : excl) {
                     getKacapWordsList.removeIf(exc::equals);
@@ -74,10 +79,12 @@ public class helloWorld extends TelegramLongPollingBot {
                 log.append("\n").append(text).append("\n");
                 int i = 0;
                 log.append(setLog(++i));
-                kacapWords1(); log.append(setLog(++i));
-                if (!kacap) { kacapWords2(); } log.append(setLog(++i));
-                if (!kacap) { rusEng(); } log.append(setLog(++i));
-                if (!send) { checkWords(); } log.append(setLog(++i));
+                if (forwardEnabled || !isForward) {
+                    kacapWords1(); log.append(setLog(++i));
+                    if (!kacap) { kacapWords2(); } log.append(setLog(++i));
+                    if (!kacap) { rusEng(); } log.append(setLog(++i));
+                    if (!send) { checkWords(); } log.append(setLog(++i));
+                }
                 if (log.substring(log.indexOf("\n") + 1).contains(" true") 
                 	&& message.getChat().getUserName() != null) {
                     System.out.print(log);
@@ -99,7 +106,7 @@ public class helloWorld extends TelegramLongPollingBot {
         send = false;
         dm = new DeleteMessage();
         sm = new SendMessage();
-        excludeStr.setLength(0);
+        exclude.setLength(0);
         getKacapWordsList = new ArrayList<>(Arrays.asList(kacapWordsList));
         getKacapWordsList2 = new ArrayList<>(Arrays.asList(kacapWordsList2));
     }
@@ -117,40 +124,51 @@ public class helloWorld extends TelegramLongPollingBot {
         }
     }
     public static void setCommands() {
-    	if (equalsCommand("start")) {
-    		send = setText("привіт! я запущений і прямо зараз працюю!" 
-    			+ (!enabled ? "\nбота вимкнено! щоб увімкнути: /toggle" : "\nдоступні команди:\n" +
-                    "/toggle - увімкнути/вимкнути бота\n/exclude - виключити непотрібні слова"));
-    	} else if (equalsCommand("toggle")) {
-        	try (FileWriter fw = new FileWriter("config.txt")) {
-            	fw.write(enabled ? toggle + message.getChatId() : toggle.replace(message.getChatId() + "", ""));
-            	send = setText("бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! " +
-            		"щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle");
-        	} catch (IOException e) {
-            	throw new RuntimeException(e);
-        	}
-        } else if (text.startsWith("/exclude ") || equalsCommand("exclude")) {
-        	try (FileWriter fw = new FileWriter("exclude.txt")) {
-        		if (equalsCommand("exclude")) {
-        			send = setText("/exclude - команда, яка дозволяє виключати непотрібні вам слова в чаті.\n\n" +
-                            "використання команди: /exclude слово1 слово2\nприклад: /exclude привет кто\n\n" +
-                            "щоб видалити всі виключення: /exclude .");
-        		} else {
-        			if (excludeStr.toString().contains(message.getChatId() + "")) {
-                        int indexID = excludeStr.indexOf(message.getChatId() + "");
-                        fw.write(excludeStr.substring(0, indexID) +
-                                message.getChatId() + " " + text.replace(command("exclude"), ""));
+        if (equalsCommand("start")) {
+            send = setText("привіт! я запущений і прямо зараз працюю!"
+                    + (!enabled ? "\nбота вимкнено! щоб увімкнути: /toggle"
+                    : "\nдоступні команди:\n" +
+                    "/toggle - увімкнути/вимкнути бота" +
+                    "\n/exclude - виключити непотрібні слова" +
+                    "\n/forward - увімкнути/вимкнути видалення пересланих повідомлень"));
+        } else {
+            try (FileWriter fw = new FileWriter(
+                    (equalsCommand("toggle") ? "config"
+                    : text.startsWith("/exclude ") || equalsCommand("exclude") ? "exclude"
+                    : equalsCommand("forward") ? "forward" : "")
+                            + ".txt")) {
+                if (equalsCommand("toggle")) {
+                    fw.write(enabled ? toggle + message.getChatId() : toggle.replace(message.getChatId() + "", ""));
+                    send = setText("бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! " +
+                            "щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle");
+                } else if (text.startsWith("/exclude ") || equalsCommand("exclude")) {
+                    if (equalsCommand("exclude")) {
+                        send = setText("/exclude - команда, яка дозволяє виключати непотрібні вам слова в чаті.\n\n" +
+                                "використання команди: /exclude слово1 слово2\nприклад: /exclude привет кто\n\n" +
+                                "щоб видалити всі виключення: /exclude .");
                     } else {
-        				fw.write(excludeStr + (message.getChatId() + " " + text.replace(command("exclude"), "")));
+                        if (exclude.toString().contains(message.getChatId() + "")) {
+                            int indexID = exclude.indexOf(message.getChatId() + "");
+                            fw.write(exclude.substring(0, indexID) +
+                                    message.getChatId() + " " + text.replace(command("exclude"), ""));
+                        } else {
+                            fw.write(exclude + (message.getChatId() + " " + text.replace(command("exclude"), "")));
+                        }
+                        send = setText("виключення записано!");
+                        enabled = false;
                     }
-                    send = setText("виключення записано!");
-                    enabled = false;
-        		}
-        	} catch (IOException ex) {
-                throw new RuntimeException(ex);
+                } else if (equalsCommand("forward")) {
+                    fw.write(forward.contains(message.getChatId() + "")
+                            ? forward.replace(message.getChatId() + "", "")
+                            : forward + message.getChatId());
+                    send = setText("видалення пересилань " + (forwardEnabled ? "вимкнено" : "увімкнено") + " в чаті! " +
+                            "щоб " + (forwardEnabled ? "увімкнути" : "вимкнути") + " знову: /forward");
+                }
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
-        
     }
     public static String command(String cmd) {
         return "/" + cmd + (text.contains("@deadkacapbot") ? "@deadkacapbot " : " ");
