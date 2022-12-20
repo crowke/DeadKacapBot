@@ -6,6 +6,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatAdministrators;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -30,6 +31,8 @@ public class helloWorld extends TelegramLongPollingBot {
     static boolean forwardEnabled = true;
     static SendMessage sm = new SendMessage();
     static DeleteMessage dm = new DeleteMessage();
+    static Chat chat;
+    static long id;
     static String text;
     static String toggle;
     static String forward;
@@ -53,16 +56,17 @@ public class helloWorld extends TelegramLongPollingBot {
             text = (message.getText() != null ? message.getText()
                     : message.getCaption() != null ? message.getCaption() : "")
                     .toLowerCase();
-            enabled = !toggle.contains(message.getChatId() + "");
+            id = message.getChatId();
+            enabled = !toggle.contains(id + "");
             isForward = message.getForwardDate() != null;
-            forwardEnabled = !forward.contains(message.getChatId() + "");
-            if (exclude.toString().contains(message.getChatId() + "")) {
-                int index = exclude.indexOf(message.getChatId() + "");
+            forwardEnabled = !forward.contains(id + "");
+            if (exclude.toString().contains(id + "")) {
+                int index = exclude.indexOf(id + "");
                 String cropped = exclude.substring(index,
                         exclude.substring(index).contains("\n")
                                 ? exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length()
                                 : exclude.length());
-                String[] excl = cropped.replace(message.getChatId() + " ", "").split(" ");
+                String[] excl = cropped.replace(id + " ", "").split(" ");
                 for (String exc : excl) {
                     getKacapWordsList.removeIf(exc::equals);
                     getKacapWordsList.removeIf(exc::contains);
@@ -73,7 +77,7 @@ public class helloWorld extends TelegramLongPollingBot {
             if (text.startsWith("/") && isAdmin()) { setCommands(); }
             boolean tenMinutes = false;
             if (enabled && !Objects.equals(text, "")
-                    && (message.getChat().isSuperGroupChat() || message.getChat().isGroupChat())) {
+                    && (chat.isSuperGroupChat() || chat.isGroupChat())) {
                 tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
                 log.setLength(0);
                 log.append("\n").append(text).append("\n");
@@ -86,14 +90,14 @@ public class helloWorld extends TelegramLongPollingBot {
                     if (!send) { checkWords(); } log.append(setLog(++i));
                 }
                 if (log.substring(log.indexOf("\n") + 1).contains(" true") 
-                	&& message.getChat().getUserName() != null) {
+                	&& chat.getUserName() != null) {
                     System.out.print(log);
                     append("log.txt", log.toString());
                 }
             }
             try {
                 if (kacap) {
-                    dm.setChatId(message.getChatId());
+                    dm.setChatId(id);
                     dm.setMessageId(message.getMessageId());
                     execute(dm);
                 }
@@ -113,7 +117,7 @@ public class helloWorld extends TelegramLongPollingBot {
 
     public static boolean setText(String answer) {
         sm.setText(answer);
-        sm.setChatId(message.getChatId());
+        sm.setChatId(id);
         return true;
     }
     public static void append(String file, String input) {
@@ -125,12 +129,12 @@ public class helloWorld extends TelegramLongPollingBot {
     }
     public static void setCommands() {
         if (equalsCommand("start")) {
-            send = setText("привіт! я запущений і прямо зараз працюю!"
-                    + (!enabled ? "\nбота вимкнено! щоб увімкнути: /toggle"
-                    : "\nдоступні команди:\n" +
-                    "/toggle - увімкнути/вимкнути бота" +
-                    "\n/exclude - виключити непотрібні слова" +
-                    "\n/forward - увімкнути/вимкнути видалення пересланих повідомлень"));
+            send = setText("привіт! я запущений і прямо зараз працюю!\n"
+                    + (!enabled ? "бота вимкнено! щоб увімкнути: /toggle"
+                    : "доступні команди:\n" +
+                    "/toggle - увімкнути/вимкнути бота\n" +
+                    "/exclude - виключити непотрібні слова\n" +
+                    "/forward - увімкнути/вимкнути видалення пересланих повідомлень"));
         } else {
             try (FileWriter fw = new FileWriter(
                     (equalsCommand("toggle") ? "config"
@@ -138,29 +142,29 @@ public class helloWorld extends TelegramLongPollingBot {
                     : equalsCommand("forward") ? "forward" : "")
                             + ".txt")) {
                 if (equalsCommand("toggle")) {
-                    fw.write(enabled ? toggle + message.getChatId() : toggle.replace(message.getChatId() + "", ""));
+                    fw.write(enabled ? toggle + id : toggle.replace(id + "", ""));
                     send = setText("бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! " +
                             "щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle");
                 } else if (text.startsWith("/exclude ") || equalsCommand("exclude")) {
                     if (equalsCommand("exclude")) {
                         send = setText("/exclude - команда, яка дозволяє виключати непотрібні вам слова в чаті.\n\n" +
                                 "використання команди: /exclude слово1 слово2\nприклад: /exclude привет кто\n\n" +
-                                "щоб видалити всі виключення: /exclude .");
+                                "щоб видалити всі виключення:\n/exclude .");
                     } else {
-                        if (exclude.toString().contains(message.getChatId() + "")) {
-                            int indexID = exclude.indexOf(message.getChatId() + "");
+                        if (exclude.toString().contains(id + "")) {
+                            int indexID = exclude.indexOf(id + "");
                             fw.write(exclude.substring(0, indexID) +
-                                    message.getChatId() + " " + text.replace(command("exclude"), ""));
+                                    id + " " + text.replace(command("exclude"), ""));
                         } else {
-                            fw.write(exclude + (message.getChatId() + " " + text.replace(command("exclude"), "")));
+                            fw.write(exclude + (id + " " + text.replace(command("exclude"), "")));
                         }
                         send = setText("виключення записано!");
                         enabled = false;
                     }
                 } else if (equalsCommand("forward")) {
-                    fw.write(forward.contains(message.getChatId() + "")
-                            ? forward.replace(message.getChatId() + "", "")
-                            : forward + message.getChatId());
+                    fw.write(forward.contains(id + "")
+                            ? forward.replace(id + "", "")
+                            : forward + id);
                     send = setText("видалення пересилань " + (forwardEnabled ? "вимкнено" : "увімкнено") + " в чаті! " +
                             "щоб " + (forwardEnabled ? "увімкнути" : "вимкнути") + " знову: /forward");
                 }
@@ -226,7 +230,7 @@ public class helloWorld extends TelegramLongPollingBot {
     public boolean isAdmin() {
         final boolean[] what = {false};
         try {
-            execute(new GetChatAdministrators(message.getChatId() + "")).forEach(chatMember1 -> {
+            execute(new GetChatAdministrators(id + "")).forEach(chatMember1 -> {
                 if (message.getFrom().getId().equals(chatMember1.getUser().getId())) {
                     what[0] = true;
                 }
@@ -249,8 +253,8 @@ public class helloWorld extends TelegramLongPollingBot {
             if (answer.contains(errors[i])) { answer = answers[i]; }
         }
         String error = "[" + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "] "
-                + answer + ": " + message.getChat().getTitle() +
-                (message.getChat().getUserName() != null ? "; https://t.me/" + message.getChat().getUserName()
+                + answer + ": " + chat.getTitle() +
+                (chat.getUserName() != null ? "; https://t.me/" + chat.getUserName()
                 + "/" + message.getMessageId() : "") + "\n";
         System.out.print(error);
         append("log.txt", error);
@@ -260,7 +264,7 @@ public class helloWorld extends TelegramLongPollingBot {
     "заебись ебат ебал тупой пидорас пидарас нихуя хуел еблан хуеть привет здаров здравствуй спасибо слуша " +
     "работ свободн почему тогда когда только почт пример русс росси понял далее запрет добавь другой совсем " +
     "понятно брос освобо согл хотел наверн мальчик девочк здрасте надеюс вреш скольк поздр разговари нрав слуша " +
-    "удобн смотр общ админ делать делай извини прости удали ").split(" ");
+    "удобн смотр общ админ делать делай извини удали ").split(" ");
     static ArrayList<String> getKacapWordsList = new ArrayList<>(Arrays.asList(kacapWordsList));
     static String[] kacapWordsList2 = (
     "как кто никто некто он его она оно они их еще что што пон нипон непон кринж " +
@@ -268,7 +272,7 @@ public class helloWorld extends TelegramLongPollingBot {
     "свои свой зачем нужно надо всем есть ебет сейчас ща щя щас щяс либо может любой любая че чего где везде " +
     "игра играть играю двое трое хорошо улиц улица улице пиздос пошел пошла дела дело делаешь ваще срочно " +
     "жду ждать ждешь даже ребята пожалуйста вдруг помоги помогите помощь помог помогла хуже играеш нужен будешь " +
-    "хочешь пишите умею хотя найти нашел нашла удачи нету жив живая живой год года лет").split(" ");
+    "хочешь пишите умею хотя найти нашел нашла удачи нету жив живая живой год года лет прости простите").split(" ");
     static ArrayList<String> getKacapWordsList2 = new ArrayList<>(Arrays.asList(kacapWordsList2));
     @Value("${telegram.bot.username}")
     private String username;
