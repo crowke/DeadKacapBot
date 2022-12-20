@@ -32,7 +32,7 @@ public class helloWorld extends TelegramLongPollingBot {
     static SendMessage sm = new SendMessage();
     static DeleteMessage dm = new DeleteMessage();
     static Chat chat;
-    static long id;
+    static String id;
     static String text;
     static String toggle;
     static String forward;
@@ -56,12 +56,13 @@ public class helloWorld extends TelegramLongPollingBot {
             text = (message.getText() != null ? message.getText()
                     : message.getCaption() != null ? message.getCaption() : "")
                     .toLowerCase();
-            id = message.getChatId();
-            enabled = !toggle.contains(id + "");
+            chat = message.getChat();
+            id = chat.getId() + "";
+            enabled = !toggle.contains(id);
             isForward = message.getForwardDate() != null;
-            forwardEnabled = !forward.contains(id + "");
-            if (exclude.toString().contains(id + "")) {
-                int index = exclude.indexOf(id + "");
+            forwardEnabled = !forward.contains(id);
+            if (exclude.toString().contains(id)) {
+                int index = exclude.indexOf(id);
                 String cropped = exclude.substring(index,
                         exclude.substring(index).contains("\n")
                                 ? exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length()
@@ -82,15 +83,14 @@ public class helloWorld extends TelegramLongPollingBot {
                 log.setLength(0);
                 log.append("\n").append(text).append("\n");
                 int i = 0;
-                log.append(setLog(++i));
+                appendLog(++i);
                 if (forwardEnabled || !isForward) {
-                    kacapWords1(); log.append(setLog(++i));
-                    if (!kacap) { kacapWords2(); } log.append(setLog(++i));
-                    if (!kacap) { rusEng(); } log.append(setLog(++i));
-                    if (!send) { checkWords(); } log.append(setLog(++i));
+                    kacapWords1(); appendLog(++i);
+                    if (!kacap) { kacapWords2(); } appendLog(++i);
+                    if (!kacap) { rusEng(); } appendLog(++i);
+                    if (!send) { checkWords(); } appendLog(++i);
                 }
-                if (log.substring(log.indexOf("\n") + 1).contains(" true") 
-                	&& chat.getUserName() != null) {
+                if (log.substring(log.indexOf("\n") + 1).contains(" true") && chat.getUserName() != null) {
                     System.out.print(log);
                     append("log.txt", log.toString());
                 }
@@ -134,7 +134,7 @@ public class helloWorld extends TelegramLongPollingBot {
                     : "доступні команди:\n" +
                     "/toggle - увімкнути/вимкнути бота\n" +
                     "/exclude - виключити непотрібні слова\n" +
-                    "/forward - увімкнути/вимкнути видалення пересланих повідомлень"));
+                    "/forward - увімкнути/вимкнути видалення пересланих повідомлень\n"));
         } else {
             try (FileWriter fw = new FileWriter(
                     (equalsCommand("toggle") ? "config"
@@ -142,7 +142,7 @@ public class helloWorld extends TelegramLongPollingBot {
                     : equalsCommand("forward") ? "forward" : "")
                             + ".txt")) {
                 if (equalsCommand("toggle")) {
-                    fw.write(enabled ? toggle + id : toggle.replace(id + "", ""));
+                    fw.write(enabled ? toggle + id : toggle.replace(id, ""));
                     send = setText("бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! " +
                             "щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle");
                 } else if (text.startsWith("/exclude ") || equalsCommand("exclude")) {
@@ -151,10 +151,9 @@ public class helloWorld extends TelegramLongPollingBot {
                                 "використання команди: /exclude слово1 слово2\nприклад: /exclude привет кто\n\n" +
                                 "щоб видалити всі виключення:\n/exclude .");
                     } else {
-                        if (exclude.toString().contains(id + "")) {
-                            int indexID = exclude.indexOf(id + "");
-                            fw.write(exclude.substring(0, indexID) +
-                                    id + " " + text.replace(command("exclude"), ""));
+                        if (exclude.toString().contains(id)) {
+                            int indexID = exclude.indexOf(id);
+                            fw.write(exclude.substring(0, indexID) + id + " " + text.replace(command("exclude"), ""));
                         } else {
                             fw.write(exclude + (id + " " + text.replace(command("exclude"), "")));
                         }
@@ -162,9 +161,7 @@ public class helloWorld extends TelegramLongPollingBot {
                         enabled = false;
                     }
                 } else if (equalsCommand("forward")) {
-                    fw.write(forward.contains(id + "")
-                            ? forward.replace(id + "", "")
-                            : forward + id);
+                    fw.write(forward.contains(id) ? forward.replace(id, "") : forward + id);
                     send = setText("видалення пересилань " + (forwardEnabled ? "вимкнено" : "увімкнено") + " в чаті! " +
                             "щоб " + (forwardEnabled ? "увімкнути" : "вимкнути") + " знову: /forward");
                 }
@@ -230,7 +227,7 @@ public class helloWorld extends TelegramLongPollingBot {
     public boolean isAdmin() {
         final boolean[] what = {false};
         try {
-            execute(new GetChatAdministrators(id + "")).forEach(chatMember1 -> {
+            execute(new GetChatAdministrators(id)).forEach(chatMember1 -> {
                 if (message.getFrom().getId().equals(chatMember1.getUser().getId())) {
                     what[0] = true;
                 }
@@ -240,9 +237,7 @@ public class helloWorld extends TelegramLongPollingBot {
         }
         return what[0];
     }
-    public static String setLog(int num) {
-        return kacap || send ? num + " " + kacap + " " + send + "\n" : "";
-    }
+    public static void appendLog(int num) { log.append(kacap || send ? num + " " + kacap + " " + send + "\n" : ""); }
     public static void displayWriteLog(Message message, Exception e) {
         String[] errors = {"message can't be deleted", "message to delete not found",
         "have no rights to send a message", "replied message not found"};
