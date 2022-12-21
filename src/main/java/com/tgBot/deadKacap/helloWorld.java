@@ -164,9 +164,12 @@ public class helloWorld extends TelegramLongPollingBot {
                     } else {
                         if (exclude.toString().contains(id)) {
                             int indexID = exclude.indexOf(id);
-                            fw.write(exclude.substring(0, indexID) + id + " " + text.replace(command("exclude"), ""));
+                            fw.write(exclude.substring(0, indexID) + id + " " + text.replace(command("exclude"), "")
+                                    + exclude.substring(indexID + exclude.substring(indexID).indexOf("\n")));
+                            //exclude.substring(indexID).indexOf("\n") рахує довжину рядка зі вказаним id,
+                            //тому функція продовжує запис, ігноруючи цей рядок
                         } else {
-                            fw.write(exclude + (id + " " + text.replace(command("exclude"), "")));
+                            fw.write(exclude + id + " " + text.replace(command("exclude"), ""));
                         }
                         send = setText("виключення записано!");
                         enabled = false;
