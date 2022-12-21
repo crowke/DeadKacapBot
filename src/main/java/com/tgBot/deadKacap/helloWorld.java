@@ -3,12 +3,14 @@ package com.tgBot.deadKacap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.GetMe;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatAdministrators;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.*;
@@ -31,6 +33,8 @@ public class helloWorld extends TelegramLongPollingBot {
     static boolean forwardEnabled = true;
     static SendMessage sm = new SendMessage();
     static DeleteMessage dm = new DeleteMessage();
+    static User bot;
+    static long botID;
     static Chat chat;
     static String id;
     static String text;
@@ -53,6 +57,8 @@ public class helloWorld extends TelegramLongPollingBot {
         message = update.hasMessage() ? update.getMessage() 
         	: update.hasEditedMessage() ? update.getEditedMessage() : null;
         if (message != null) {
+            bot = getBot();
+            botID = bot.getId();
             text = (message.getText() != null ? message.getText()
                     : message.getCaption() != null ? message.getCaption() : "")
                     .toLowerCase();
@@ -85,9 +91,14 @@ public class helloWorld extends TelegramLongPollingBot {
                 int i = 0;
                 appendLog(++i);
                 if (forwardEnabled || !isForward) {
-                    kacapWords1(); appendLog(++i);
-                    if (!kacap) { kacapWords2(); } appendLog(++i);
-                    if (!kacap) { rusEng(); } appendLog(++i);
+                    if (canBotDelete()) {
+                        kacapWords1(); appendLog(++i);
+                        if (!kacap) { kacapWords2(); } appendLog(++i);
+                        if (!kacap) { rusEng(); } appendLog(++i);
+                    } else if (!send) {
+                        send = setText("помилка: не маю прав на видалення повідомлення!\n" +
+                                "надайте мені права на видалення або вимкніть мене: /toggle");
+                    }
                     if (!send) { checkWords(); } appendLog(++i);
                 }
                 if (log.substring(log.indexOf("\n") + 1).contains(" true") && chat.getUserName() != null) {
@@ -225,17 +236,27 @@ public class helloWorld extends TelegramLongPollingBot {
         }
     }
     public boolean isAdmin() {
-        final boolean[] what = {false};
+        final boolean[] admin = {false};
         try {
             execute(new GetChatAdministrators(id)).forEach(chatMember1 -> {
-                if (message.getFrom().getId().equals(chatMember1.getUser().getId())) {
-                    what[0] = true;
-                }
+                if (message.getFrom().getId().equals(chatMember1.getUser().getId())) { admin[0] = true; }
             });
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
-        return what[0];
+        return admin[0];
+    }
+    public boolean canBotDelete() {
+        final boolean[] canDelete = {false};
+        try {
+            execute(new GetChatAdministrators(id)).forEach(chatMember -> {
+                if (chatMember.getUser().getId().equals(botID)
+                        && chatMember.toString().contains("canDeleteMessages=true")) { canDelete[0] = true; }
+            });
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+        return canDelete[0];
     }
     public static void appendLog(int num) { log.append(kacap || send ? num + " " + kacap + " " + send + "\n" : ""); }
     public static void displayWriteLog(Message message, Exception e) {
@@ -281,5 +302,14 @@ public class helloWorld extends TelegramLongPollingBot {
     @Override
     public String getBotToken() {
         return token;
+    }
+    public User getBot() {
+        User bot;
+        try {
+            bot = execute(new GetMe());
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+        return bot;
     }
 }
