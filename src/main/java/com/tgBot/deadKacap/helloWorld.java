@@ -94,11 +94,12 @@ public class helloWorld extends TelegramLongPollingBot {
                     kacapWords1(); appendLog(++i);
                     if (!kacap) { kacapWords2(); } appendLog(++i);
                     if (!kacap) { rusEng(); } appendLog(++i);
-                    if (!canBotDelete() && kacap) {
-                        send = setText("помилка: не маю прав на видалення повідомлення!\n" +
-                                "надайте мені права на видалення або вимкніть мене: /toggle");
-                    }
                     if (!send) { checkWords(); } appendLog(++i);
+                }
+                if (!canBotDelete() && kacap) {
+                    send = setText("помилка: не маю прав на видалення повідомлення!\n" +
+                            "надайте мені права на видалення або вимкніть мене: /toggle");
+                    kacap = false;
                 }
                 if (log.substring(log.indexOf("\n") + 1).contains(" true") && chat.getUserName() != null) {
                     System.out.print(log);
