@@ -263,11 +263,11 @@ public class helloWorld extends TelegramLongPollingBot {
     }
     public static void appendLog(int num) { log.append(kacap || send ? num + " " + kacap + " " + send + "\n" : ""); }
     public static void displayWriteLog(Message message, Exception e) {
-        String[] errors = {"message can't be deleted", "message to delete not found",
-        "have no rights to send a message", "replied message not found"};
-        String[] answers = {"повідомлення не може бути видалене", "повідомлення не знайдено",
-        "немає прав для відправлення", "повідомлення для відповіді не знайдене"};
         String answer = e.getMessage();
+        boolean ignore = answer.contains("have no rights to send a message");
+        String[] errors = {"message can't be deleted", "message to delete not found", "replied message not found"};
+        String[] answers = {"повідомлення не може бути видалене", "повідомлення не знайдено",
+                "повідомлення для відповіді не знайдене"};
         for (int i = 0; i < errors.length; i++) {
             if (answer.contains(errors[i])) { answer = answers[i]; }
         }
@@ -276,7 +276,7 @@ public class helloWorld extends TelegramLongPollingBot {
                 (chat.getUserName() != null ? "; https://t.me/" + chat.getUserName()
                 + "/" + message.getMessageId() : "") + "\n";
         System.out.print(error);
-        append("log.txt", error);
+        if (!ignore) { append("log.txt", error); }
     }
     static String[] kacapWordsList = (
     "э ы ъ ё ьі " +
