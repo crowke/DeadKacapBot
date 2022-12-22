@@ -91,11 +91,10 @@ public class helloWorld extends TelegramLongPollingBot {
                 int i = 0;
                 appendLog(++i);
                 if (forwardEnabled || !isForward) {
-                    if (canBotDelete()) {
-                        kacapWords1(); appendLog(++i);
-                        if (!kacap) { kacapWords2(); } appendLog(++i);
-                        if (!kacap) { rusEng(); } appendLog(++i);
-                    } else if (!send) {
+                    kacapWords1(); appendLog(++i);
+                    if (!kacap) { kacapWords2(); } appendLog(++i);
+                    if (!kacap) { rusEng(); } appendLog(++i);
+                    if (!canBotDelete() && kacap) {
                         send = setText("помилка: не маю прав на видалення повідомлення!\n" +
                                 "надайте мені права на видалення або вимкніть мене: /toggle");
                     }
