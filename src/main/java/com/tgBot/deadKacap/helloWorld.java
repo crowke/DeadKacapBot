@@ -1,5 +1,6 @@
 package com.tgBot.deadKacap;
 
+import com.ibm.icu.text.Transliterator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -26,13 +27,14 @@ import java.util.regex.Pattern;
 @Component
 public class helloWorld extends TelegramLongPollingBot {
     static Message message;
-    static boolean send = false;
-    static boolean kacap = false;
+    static boolean send;
+    static boolean kacap;
     static boolean enabled = true;
     static boolean isForward = false;
     static boolean forwardEnabled = true;
-    static SendMessage sm = new SendMessage();
-    static DeleteMessage dm = new DeleteMessage();
+    static boolean tenMinutes = false;
+    static SendMessage sm;
+    static DeleteMessage dm;
     static User bot;
     static long botID;
     static Chat chat;
@@ -45,46 +47,47 @@ public class helloWorld extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+        kacap = false;
+        send = false;
+        dm = new DeleteMessage();
+        sm = new SendMessage();
+        exclude.setLength(0);
+        getKacapWordsList = new ArrayList<>(Arrays.asList(kacapWordsList));
+        getKacapWordsList2 = new ArrayList<>(Arrays.asList(kacapWordsList2));
+
+        //зчитування всіх конфігів
         try (Scanner toggleSc = new Scanner(new FileReader("config.txt")); 
         	Scanner excludeSc = new Scanner(new FileReader("exclude.txt"));
             Scanner forwardSc = new Scanner(new FileReader("forward.txt"))) {
         		toggle = toggleSc.hasNext() ? toggleSc.nextLine() : "";
                 forward = forwardSc.hasNext() ? forwardSc.nextLine() : "";
-        		while (excludeSc.hasNext()) { exclude.append(excludeSc.nextLine()).append("\n"); }
+        		while (excludeSc.hasNext()) {
+                    exclude.append(excludeSc.nextLine()).append("\n");
+                }
         	} catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
         }
+
         message = update.hasMessage() ? update.getMessage() 
         	: update.hasEditedMessage() ? update.getEditedMessage() : null;
         if (message != null) {
             bot = getBot();
             botID = bot.getId();
-            text = (message.getText() != null ? message.getText()
-                    : message.getCaption() != null ? message.getCaption() : "")
-                    .toLowerCase();
             chat = message.getChat();
             id = chat.getId() + "";
             enabled = !toggle.contains(id);
             isForward = message.getForwardDate() != null;
             forwardEnabled = !forward.contains(id);
+            text = (message.getText() != null ? message.getText()
+                    : message.getCaption() != null ? message.getCaption() : "")
+                    .toLowerCase();
             if (exclude.toString().contains(id)) {
-                int index = exclude.indexOf(id);
-                String cropped = exclude.substring(index,
-                        exclude.substring(index).contains("\n")
-                                ? exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length()
-                                : exclude.length());
-                String[] excl = cropped.replace(id + " ", "").split(" ");
-                for (String exc : excl) {
-                    getKacapWordsList.removeIf(exc::equals);
-                    getKacapWordsList.removeIf(exc::contains);
-                    getKacapWordsList2.removeIf(exc::equals);
-                    getKacapWordsList2.removeIf(exc::contains);
-                }
+                trimWordList();
             }
-            if (text.startsWith("/") && isAdmin()) { setCommands(); }
-            boolean tenMinutes = false;
-            if (enabled && !Objects.equals(text, "")
-                    && (chat.isSuperGroupChat() || chat.isGroupChat())) {
+            if (text.startsWith("/") && isAdmin()) {
+                setCommands();
+            }
+            if (enabled && !Objects.equals(text, "") && (chat.isSuperGroupChat() || chat.isGroupChat())) {
                 tenMinutes = message.getDate() - (System.currentTimeMillis() / 1000L) <= -600;
                 log.setLength(0);
                 log.append("\n").append(text).append("\n");
@@ -112,18 +115,13 @@ public class helloWorld extends TelegramLongPollingBot {
                     dm.setMessageId(message.getMessageId());
                     execute(dm);
                 }
-                if (send && !tenMinutes) { execute(sm); }
+                if (send && !tenMinutes) {
+                    execute(sm);
+                }
             } catch (TelegramApiException e) {
                 displayWriteLog(message, e);
             }
         }
-        kacap = false;
-        send = false;
-        dm = new DeleteMessage();
-        sm = new SendMessage();
-        exclude.setLength(0);
-        getKacapWordsList = new ArrayList<>(Arrays.asList(kacapWordsList));
-        getKacapWordsList2 = new ArrayList<>(Arrays.asList(kacapWordsList2));
     }
 
     public static boolean setText(String answer) {
@@ -190,6 +188,20 @@ public class helloWorld extends TelegramLongPollingBot {
     }
     public static boolean equalsCommand(String command) {
     	return text.equals("/" + command) || text.equals("/" + command + "@deadkacapbot");
+    }
+    public static void trimWordList() {
+        int index = exclude.indexOf(id);
+        String cropped = exclude.substring(index,
+                exclude.substring(index).contains("\n")
+                        ? exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length()
+                        : exclude.length());
+        String[] excl = cropped.replace(id + " ", "").split(" ");
+        for (String exc : excl) {
+            getKacapWordsList.removeIf(exc::equals);
+            getKacapWordsList.removeIf(exc::contains);
+            getKacapWordsList2.removeIf(exc::equals);
+            getKacapWordsList2.removeIf(exc::contains);
+        }
     }
     public static void kacapWords1() {
         for (String kacapWord : getKacapWordsList) {

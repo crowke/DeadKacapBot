@@ -16,6 +16,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'org.telegram:telegrambots-spring-boot-starter:6.1.0'
+    implementation 'com.ibm.icu:icu4j:72.1'
 }
 
 tasks.named('test') {
