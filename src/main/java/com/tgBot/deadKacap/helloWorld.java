@@ -1,6 +1,6 @@
 package com.tgBot.deadKacap;
 
-import com.ibm.icu.text.Transliterator;
+//import com.ibm.icu.text.Transliterator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -47,6 +47,7 @@ public class helloWorld extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+        //kacapWordsListTranslit();
         kacap = false;
         send = false;
         dm = new DeleteMessage();
@@ -167,7 +168,7 @@ public class helloWorld extends TelegramLongPollingBot {
                             //exclude.substring(indexID).indexOf("\n") рахує довжину рядка зі вказаним id,
                             //тому функція продовжує запис, ігноруючи цей рядок
                         } else {
-                            fw.write(exclude + id + " " + text.replace(command("exclude"), ""));
+                            fw.write(exclude + id + " " + text.replace(command("exclude"), "") + "\n");
                         }
                         send = setText("виключення записано!");
                         enabled = false;
@@ -304,8 +305,18 @@ public class helloWorld extends TelegramLongPollingBot {
     "игра играть играю двое трое хорошо улиц улица улице пиздос пошел пошла дела дело делаешь ваще срочно " +
     "жду ждать ждешь даже ребята пожалуйста вдруг помоги помогите помощь помог помогла хуже играеш нужен будешь " +
     "хочешь пишите умею хотя найти нашел нашла удачи нету жив живая живой год года лет прости простите нечто ничто " +
-    "такое такой такие такая").split(" ");
+    "такое такой такие такая пидор пидар пидорас пидарас жизнь ").split(" ");
     static ArrayList<String> getKacapWordsList2 = new ArrayList<>(Arrays.asList(kacapWordsList2));
+    /*public static void kacapWordsListTranslit() {
+        var CYRILLIC_TO_LATIN = "Russian-Latin/BGN";
+        Transliterator toLatinTrans = Transliterator.getInstance(CYRILLIC_TO_LATIN);
+        for (String kacapWord : kacapWordsList) {
+            System.out.print(toLatinTrans.transliterate(kacapWord) + " ");
+        }
+        for (String kacapWord2 : kacapWordsList2) {
+            System.out.print(toLatinTrans.transliterate(kacapWord2 + " "));
+        }
+    }*/
     @Value("${telegram.bot.username}")
     private String username;
     @Value("${telegram.bot.token}")
