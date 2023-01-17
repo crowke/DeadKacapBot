@@ -21,7 +21,6 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
@@ -76,6 +75,7 @@ public class helloWorld extends TelegramLongPollingBot {
         message = update.hasMessage() ? update.getMessage() 
         	: update.hasEditedMessage() ? update.getEditedMessage() : null;
         if (message != null) {
+            System.out.println(message.getFrom());
             chat = message.getChat();
             chatUsername = chat.getUserName();
             id = chat.getId() + "";
@@ -221,10 +221,14 @@ public class helloWorld extends TelegramLongPollingBot {
     }
     public void trimWordList() {
         int index = exclude.indexOf(id);
-        String cropped = exclude.substring(index,
-                exclude.substring(index).contains("\n")
-                        ? exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length()
-                        : exclude.length());
+        boolean endFile = !exclude.substring(index).contains("\n");
+        int endPoint = endFile
+                ? exclude.length()
+                : exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length();
+        String cropped = exclude.substring(index, endPoint);
+        //ріже файл exclude.txt від id чату(включно) до \n, тобто доки не закінчиться рядок зі словами
+        //якщо \n немає(кінець файлу), то бере до кінця файлу
+
         String[] excl = cropped.replace(id + " ", "").split(" ");
         for (String exc : excl) {
             getKacapWordsList.removeIf(exc::equals);
@@ -246,8 +250,7 @@ public class helloWorld extends TelegramLongPollingBot {
     public void kacapWords2() {
         for (String kacapWord2 : getKacapWordsList2) {
             Pattern pattern = Pattern.compile("\\b" + kacapWord2 + "\\b");
-            Matcher matcher = pattern.matcher(text);
-            kacap = matcher.find();
+            kacap = pattern.matcher(text).find();
             if (kacap) { send = setText("повідомлення видалено через слово \"" + kacapWord2 + "\""); break; }
         }
     }
@@ -283,9 +286,8 @@ public class helloWorld extends TelegramLongPollingBot {
     public boolean isAdmin() {
         final boolean[] admin = {false};
         try {
-            execute(new GetChatAdministrators(id)).forEach(chatMember1 -> {
-                if (message.getFrom().getId().equals(chatMember1.getUser().getId())) { admin[0] = true; }
-            });
+            execute(new GetChatAdministrators(id)).forEach(chatMember1 ->
+                    admin[0] = admin[0] || message.getFrom().getId().equals(chatMember1.getUser().getId()));
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
@@ -294,10 +296,9 @@ public class helloWorld extends TelegramLongPollingBot {
     public boolean canBotDelete() {
         final boolean[] canDelete = {false};
         try {
-            execute(new GetChatAdministrators(id)).forEach(chatMember -> {
-                if (chatMember.getUser().getId().equals(botID)
-                        && chatMember.toString().contains("canDeleteMessages=true")) { canDelete[0] = true; }
-            });
+            execute(new GetChatAdministrators(id)).forEach(chatMember ->
+                    canDelete[0] = canDelete[0] || (chatMember.getUser().getId().equals(botID)
+                    && chatMember.toString().contains("canDeleteMessages=true")));
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
@@ -311,7 +312,7 @@ public class helloWorld extends TelegramLongPollingBot {
         String[] answers = {"повідомлення не може бути видалене", "повідомлення не знайдено",
                 "повідомлення для відповіді не знайдене"};
         for (int i = 0; i < errors.length; i++) {
-            if (answer.contains(errors[i])) { answer = answers[i]; }
+            if (answer.contains(errors[i])) { answer = answers[i]; break; }
         }
         String error = "[" + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "] "
                 + answer + ": " + chat.getTitle() +
@@ -326,16 +327,16 @@ public class helloWorld extends TelegramLongPollingBot {
     "работ свободн почему тогда когда только почт пример русс росси понял далее запрет добавь другой совсем " +
     "понятно брос освобо согл хотел наверн мальчик девочк здрасте надеюс вреш скольк поздр разговари нрав слуша " +
     "удобн смотр общ админ делать делай извини удали наконец сложн ребят хохол хохл аниме ").split(" ");
-    static ArrayList<String> getKacapWordsList = new ArrayList<>(Arrays.asList(kacapWordsList));
+    static ArrayList<String> getKacapWordsList;
     static String[] kacapWordsList2 = (
     "как кто никто некто его ето она оно они их еще что што пон поняв нипон непон кринж " +
     "какой какие каких нет однако пока если меня тебя сегодня и иди потом дашь пиздец лет мне ищу надо мой твой " +
     "свои свой зачем нужно надо всем есть ебет сейчас ща щя щас щяс либо может любой любая че чего где везде " +
     "игра играть играю двое трое хорошо улиц улица улице пиздос пошел пошла дела дело делаешь ваще срочно " +
     "жду ждать ждешь даже ребята пожалуйста вдруг помоги помогите помощь помог поможет помогла хуже играеш нужен будешь " +
-    "хочешь пишите умею хотя нашел нашла удачи нету живая живой год года лет прости простите нечто ничто " +
-    "такое такой такие такая пидр пидор пидар пидорас пидарас дебил дибил тварь время жизнь ").split(" ");
-    static ArrayList<String> getKacapWordsList2 = new ArrayList<>(Arrays.asList(kacapWordsList2));
+    "хочешь пишите умею хотя нашел нашла удачи нету живая живой года лет прости простите нечто ничто " +
+    "такое такой такие такая пидр пидор пидар пидорас пидарас дебил дибил тварь время жизнь лучше ").split(" ");
+    static ArrayList<String> getKacapWordsList2;
     public static void kacapWordsListTranslit() {
         Transliterator toLatinTrans = Transliterator.getInstance("Russian-Latin/BGN");
         for (String kacapWord : kacapWordsList) {
