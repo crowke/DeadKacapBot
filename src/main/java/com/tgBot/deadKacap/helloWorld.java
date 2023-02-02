@@ -280,8 +280,8 @@ public class helloWorld extends TelegramLongPollingBot {
             j += i > 2 ? 0 : 1;
         }
 
-        String[] inputsEquals = {"кацапи", "Україна".toLowerCase()};
-        String[] outputsEquals = {"нелюди!", "понад усе!"};
+        String[] inputsEquals = {"кацапи", "Україна".toLowerCase(), "путлер", "путлєр"};
+        String[] outputsEquals = {"нелюди!", "понад усе!", "капут", "капут"};
         for (int i = 0; i < inputsEquals.length; i++) {
             send = text.equals(inputsEquals[i]) ? setText(outputsEquals[i]) : send;
         }
