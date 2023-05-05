@@ -34,7 +34,7 @@ public class helloWorld extends TelegramLongPollingBot {
     boolean tenMinutes = false;
     SendMessage sm;
     DeleteMessage dm;
-    User bot;
+    User bot = null;
     Chat chat;
     String chatUsername;
     String id;
@@ -50,7 +50,7 @@ public class helloWorld extends TelegramLongPollingBot {
         System.out.println();
         System.out.println("start " + System.currentTimeMillis());
         //kacapWordsListTranslit();
-        bot = getBot();
+        bot = getBot(bot);
         kacap = false;
         send = false;
         dm = new DeleteMessage();
@@ -356,11 +356,13 @@ public class helloWorld extends TelegramLongPollingBot {
     public String getBotToken() {
         return token;
     }
-    public User getBot() {
-        try {
-            bot = execute(new GetMe());
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+    public User getBot(User bot) {
+        if (bot == null) {
+            try {
+                bot = execute(new GetMe());
+            } catch (TelegramApiException e) {
+                throw new RuntimeException(e);
+            }
         }
         return bot;
     }
