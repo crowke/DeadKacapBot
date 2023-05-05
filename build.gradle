@@ -17,6 +17,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'org.telegram:telegrambots-spring-boot-starter:6.1.0'
     implementation 'com.ibm.icu:icu4j:72.1'
+	implementation 'org.xerial:sqlite-jdbc:3.8.11.2'
 }
 
 tasks.named('test') {

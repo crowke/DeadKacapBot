@@ -18,13 +18,13 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
+import java.sql.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
 @Component
 public class helloWorld extends TelegramLongPollingBot {
+    Database db = new Database();
     Message message;
     boolean send;
     boolean kacap;
@@ -34,51 +34,36 @@ public class helloWorld extends TelegramLongPollingBot {
     boolean tenMinutes = false;
     SendMessage sm;
     DeleteMessage dm;
-    User bot;
-    long botID;
+    User bot = getBot();
     Chat chat;
     String chatUsername;
     String id;
     int messageId;
     String text;
-    String toggle;
-    String forward;
-    StringBuilder exclude = new StringBuilder();
+    String toggle = db.selectAll("toggle", false);
+    String forward = db.selectAll("forward", false);
+    String exclude = db.selectAll("exclude", true);
     StringBuilder log = new StringBuilder();
 
     @Override
     public void onUpdateReceived(Update update) {
+        System.out.println();
+        System.out.println("start " + System.currentTimeMillis());
         //kacapWordsListTranslit();
-        bot = getBot();
-        botID = bot.getId();
         kacap = false;
         send = false;
         dm = new DeleteMessage();
         sm = new SendMessage();
-        exclude.setLength(0);
         getKacapWordsList = new ArrayList<>(Arrays.asList(kacapWordsList));
         getKacapWordsList2 = new ArrayList<>(Arrays.asList(kacapWordsList2));
         log.setLength(0);
+        message = update.hasMessage() ? update.getMessage()
+                : update.hasEditedMessage() ? update.getEditedMessage() : null;
 
-        try (Scanner toggleSc = new Scanner(new FileReader("toggle.txt"));
-        	Scanner excludeSc = new Scanner(new FileReader("exclude.txt"));
-            Scanner forwardSc = new Scanner(new FileReader("forward.txt"))) {
-        		toggle = toggleSc.hasNext() ? toggleSc.nextLine() : "";
-                forward = forwardSc.hasNext() ? forwardSc.nextLine() : "";
-        		while (excludeSc.hasNext()) {
-                    exclude.append(excludeSc.nextLine()).append("\n");
-                }
-        	} catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-        }
-
-        message = update.hasMessage() ? update.getMessage() 
-        	: update.hasEditedMessage() ? update.getEditedMessage() : null;
         if (message != null) {
-            System.out.println(message.getFrom());
             chat = message.getChat();
             chatUsername = chat.getUserName();
-            id = chat.getId() + "";
+            id = String.valueOf(chat.getId());
             messageId = message.getMessageId();
             enabled = !toggle.contains(id);
             isForward = message.getForwardDate() != null;
@@ -86,7 +71,8 @@ public class helloWorld extends TelegramLongPollingBot {
             text = (message.getText() != null ? message.getText()
                     : message.getCaption() != null ? message.getCaption() : "")
                     .toLowerCase();
-            if (exclude.toString().contains(id)) {
+
+            if (exclude.contains(id)) {
                 trimWordList();
             }
             if (text.startsWith("/")) {
@@ -97,34 +83,52 @@ public class helloWorld extends TelegramLongPollingBot {
                 log.append("\n").append(text).append("\n");
                 int i = 0;
                 appendLog(++i);
-                if (!isForward || forwardEnabled) {
+                boolean hasCyrillic = checkCyrillic();
+                if ((!isForward || forwardEnabled) && hasCyrillic) {
+                    System.out.println("before " + System.currentTimeMillis());
                     kacapWords1(); appendLog(++i);
+                    System.out.println("kacapWords1 " + System.currentTimeMillis());
                     if (!kacap) { kacapWords2(); } appendLog(++i);
+                    System.out.println("kacapWords2 " + System.currentTimeMillis());
                     if (!kacap) { rusEng(); } appendLog(++i);
+                    System.out.println("rusEng " + System.currentTimeMillis());
                     if (!send) { checkWords(); } appendLog(++i);
-                }
-                if (!canBotDelete() && kacap) {
-                    send = setText("помилка: не маю прав на видалення повідомлення!\n" +
-                            "надайте мені права на видалення або вимкніть мене: /toggle");
-                    kacap = false;
-                }
-                if (log.substring(log.indexOf("\n") + 1).contains(" true") && chatUsername != null) {
-                    System.out.print(log);
-                    append("log.txt", log.toString());
+                    System.out.println("checkWords " + System.currentTimeMillis());
+                    if (log.substring(log.indexOf("\n") + 1).contains(" true") && chatUsername != null) {
+                        System.out.print(log);
+                        append("log.txt", log.toString());
+                    }
                 }
             }
+
             try {
                 if (kacap) {
                     dm.setChatId(id);
                     dm.setMessageId(messageId);
                     execute(dm);
+                    System.out.println("execute dm " + System.currentTimeMillis());
                 }
                 if (send && !tenMinutes) {
                     execute(sm);
+                    System.out.println("execute sm " + System.currentTimeMillis());
                 }
             } catch (TelegramApiException e) {
-                displayWriteLog(e);
+                if (e.getMessage().contains("have no rights to send a message")
+                || e.getMessage().contains("message can't be deleted")) {
+                    send = setText(
+                            "помилка видалення! можливо, не надано прав на видалення повідомлень.\n" +
+                            "надайте мені права на видалення або вимкніть мене: /toggle");
+                    try {
+                        if (send && !tenMinutes) {
+                            execute(sm);
+                        }
+                    } catch (TelegramApiException ex) {
+                        ex.printStackTrace();
+                    }
+                }
             }
+
+            System.out.println("end " + System.currentTimeMillis());
         }
     }
 
@@ -149,75 +153,62 @@ public class helloWorld extends TelegramLongPollingBot {
                     "/exclude - виключити непотрібні слова\n" +
                     "/forward - увімкнути/вимкнути видалення пересланих повідомлень\n"));
         } else if (isAdmin()) {
-            int indexID = exclude.indexOf(id);
             boolean eqToggle = equalsCommand("toggle");
             boolean eqExclude = equalsCommand("exclude");
             boolean stExclude = text.startsWith("/exclude ");
             boolean eqForward = equalsCommand("forward");
-            String same = eqToggle ? toggle : stExclude ? exclude.toString() : eqForward ? forward : "";
-            try (FileWriter fw = new FileWriter((
-                 eqToggle ? "toggle"
-                 : stExclude ? "exclude"
-                 : eqForward ? "forward"
-                 : "")
-                 + ".txt")) {
+            if (eqToggle && enabled) {
+                db.insert("toggle", id);
+                toggle = db.selectAll("toggle", false);
+            } else if (eqToggle) {
+                db.delete("toggle", id);
+                toggle = db.selectAll("toggle", false);
+            } else if (eqForward) {
+                if (forward.contains(id)) {
+                    db.delete("forward", id);
+                    forward = db.selectAll("forward", false);
+                } else {
+                    db.insert("forward", id);
+                    forward = db.selectAll("forward", false);
+                }
+            } else if (stExclude && exclude.contains(id)) {
+                db.delete("exclude", id);
+                exclude = db.selectAll("exclude", true);
+            } else if (stExclude) {
+                db.insert("exclude", id, text.replace(command("exclude"), ""));
+                exclude = db.selectAll("exclude", true);
+            }
 
-                fw.write(
-                    eqToggle && enabled
-                    ? toggle + id
+            enabled = (!stExclude || !exclude.contains(id)) && enabled;
 
-                    : eqToggle
-                    ? toggle.replace(id, "")
+            String getText =
+                    eqToggle
+                    ? "бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! "
+                    + "щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle"
 
-                    : stExclude && exclude.toString().contains(id)
-                    ? exclude.substring(0, indexID) + id + " " + text.replace(command("exclude"), "")
-                    + exclude.substring(indexID + exclude.substring(indexID).indexOf("\n"))
+                    : eqExclude
+                    ? "/exclude - команда, яка дозволяє виключати непотрібні вам слова в чаті.\n\n"
+                    + "використання команди: /exclude слово1 слово2\n"
+                    + "приклади:\n/exclude привет\n/exclude привет кто почему\n\n"
+                    + "щоб видалити всі виключення:\n/exclude ."
 
                     : stExclude
-                    ? exclude + id + " " + text.replace(command("exclude"), "") + "\n"
+                    ? "виключення записано!"
 
                     : eqForward
-                    ? forward.contains(id) ? forward.replace(id, "") : forward + id
+                    ? "видалення пересилань " + (forwardEnabled ? "вимкнено" : "увімкнено") + " в чаті! "
+                    + "щоб " + (forwardEnabled ? "увімкнути" : "вимкнути") + " знову: /forward"
 
-                    : same
-                );
-                //exclude.substring(indexID).indexOf("\n") рахує довжину рядка зі вказаним id,
-                //тому функція продовжує запис, ігноруючи цей рядок
+                    : "";
 
-                enabled = (!stExclude || !exclude.toString().contains(id)) && enabled;
-
-                String getText =
-                        eqToggle
-                        ? "бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! "
-                        + "щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle"
-
-                        : eqExclude
-                        ? "/exclude - команда, яка дозволяє виключати непотрібні вам слова в чаті.\n\n"
-                        + "використання команди: /exclude слово1 слово2\n"
-                        + "приклади:\n/exclude привет\n/exclude привет кто почему\n\n"
-                        + "щоб видалити всі виключення:\n/exclude ."
-
-                        : stExclude
-                        ? "виключення записано!"
-
-                        : eqForward
-                        ? "видалення пересилань " + (forwardEnabled ? "вимкнено" : "увімкнено") + " в чаті! "
-                        + "щоб " + (forwardEnabled ? "увімкнути" : "вимкнути") + " знову: /forward"
-
-                        : "";
-
-                send = !Objects.equals(getText, "") ? setText(getText) : send;
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            send = !Objects.equals(getText, "") ? setText(getText) : send;
         }
     }
     public String command(String cmd) {
         return "/" + cmd + (text.contains("@deadkacapbot") ? "@deadkacapbot " : " ");
     }
     public boolean equalsCommand(String command) {
-    	return text.equals("/" + command) || text.equals("/" + command + "@deadkacapbot");
+        return text.equals("/" + command) || text.equals("/" + command + "@deadkacapbot");
     }
     public void trimWordList() {
         int index = exclude.indexOf(id);
@@ -236,6 +227,17 @@ public class helloWorld extends TelegramLongPollingBot {
             getKacapWordsList2.removeIf(exc::equals);
             getKacapWordsList2.removeIf(exc::contains);
         }
+    }
+    public boolean checkCyrillic() {
+        boolean what = false;
+        String[] alphabet = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюяэыъё".split("");
+        for (String letter : alphabet) {
+            if (text.contains(letter)) {
+                what = true;
+                break;
+            }
+        }
+        return what;
     }
     public void kacapWords1() {
         for (String kacapWord : getKacapWordsList) {
@@ -260,7 +262,7 @@ public class helloWorld extends TelegramLongPollingBot {
             String word = mesSc.next();
             for (char eng = 97; eng <= 122; eng++) {
                 for (char rus = 1072; rus <= 1103; rus++) {
-                    if (word.contains("" + rus + eng) || word.contains("" + eng + rus)) {
+                    if (word.contains(String.valueOf(rus) + eng) || word.contains(String.valueOf(eng) + rus)) {
                         kacap = true;
                         send = setText("повідомлення видалено через заміну в слові кирилиці на англійські букви");
                         break;
@@ -270,7 +272,6 @@ public class helloWorld extends TelegramLongPollingBot {
         }
     }
     public void checkWords() {
-
         int j = 0;
         String[] inputsContains = {"слава Україні".toLowerCase(), "слава нації", "кацапи",
         "путін", "путин", "путлер", "путлєр"};
@@ -301,23 +302,11 @@ public class helloWorld extends TelegramLongPollingBot {
         }
         return admin[0];
     }
-    public boolean canBotDelete() {
-        final boolean[] canDelete = {false};
-        try {
-            execute(new GetChatAdministrators(id)).forEach(chatMember ->
-                    canDelete[0] = canDelete[0] || (chatMember.getUser().getId().equals(botID)
-                    && chatMember.toString().contains("canDeleteMessages=true")));
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
-        }
-        return canDelete[0];
-    }
     public void appendLog(int num) { log.append(kacap || send ? num + " " + kacap + " " + send + "\n" : ""); }
-    public void displayWriteLog(Exception e) {
+    /*public void displayWriteLog(Exception e) {
         String answer = e.getMessage();
-        boolean ignore = answer.contains("have no rights to send a message");
-        String[] errors = {"message can't be deleted", "message to delete not found", "replied message not found"};
-        String[] answers = {"повідомлення не може бути видалене", "повідомлення не знайдено",
+        String[] errors = {"message to delete not found", "replied message not found"};
+        String[] answers = {"повідомлення не знайдено",
                 "повідомлення для відповіді не знайдене"};
         for (int i = 0; i < errors.length; i++) {
             if (answer.contains(errors[i])) { answer = answers[i]; break; }
@@ -327,8 +316,8 @@ public class helloWorld extends TelegramLongPollingBot {
                 (chatUsername != null ? "; https://t.me/" + chatUsername
                 + "/" + messageId : "") + "\n";
         System.out.print(error);
-        if (!ignore) { append("log.txt", error); }
-    }
+        append("log.txt", error);
+    }*/
     static String[] kacapWordsList = (
     "э ы ъ ё ьі " +
     "заебись ебат ебал тупой пидорас пидарас нихуя хуел еблан хуеть привет здаров здравствуй спасибо слуша " +
@@ -374,5 +363,62 @@ public class helloWorld extends TelegramLongPollingBot {
             throw new RuntimeException(e);
         }
         return bot;
+    }
+}
+class Database {
+    Connection conn = connect();
+    public Connection connect() {
+        Connection conn = null;
+        try {
+            conn = DriverManager.getConnection("jdbc:sqlite:database.db");
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return conn;
+    }
+    public void insert(String table, String chatId) {
+        String sql = "INSERT INTO " + table + "(chatId) VALUES(" + chatId + ")";
+        sqlExec(sql);
+    }
+    public void insert(String table, String chatId, String data) {
+        String sql = "INSERT INTO " + table + "(chatId, data) VALUES(" + chatId + ",'" + data + "')";
+        sqlExec(sql);
+    }
+    public String selectAll(String table, boolean addData) {
+        String sql = "SELECT * FROM " + table;
+        return sqlExec(sql, true, addData);
+    }
+    public void delete(String table, String chatId) {
+        String sql = "DELETE FROM " + table + " WHERE chatId = " + chatId;
+        sqlExec(sql);
+    }
+    public void sqlExec(String sql) {
+        try {
+            Statement stmt = conn.createStatement();
+            stmt.execute(sql);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public String sqlExec(String sql, boolean selectAll, boolean addData) {
+        StringBuilder result = new StringBuilder();
+        if (selectAll) {
+            try {
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql);
+                while (rs.next()) {
+                    result.append(rs.getString("chatId"));
+                    if (addData) {
+                        result.append(" ");
+                        result.append(rs.getString("data"));
+                    }
+                    result.append("\n");
+                }
+                result.deleteCharAt(result.lastIndexOf("\n"));
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return String.valueOf(result);
     }
 }
