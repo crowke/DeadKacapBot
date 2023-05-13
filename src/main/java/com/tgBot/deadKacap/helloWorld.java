@@ -301,7 +301,7 @@ public class helloWorld extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
-        return admin[0];
+        return admin[0] || id.equals("-1001732920221");
     }
     public void appendLog(int num) { log.append(kacap || send ? num + " " + kacap + " " + send + "\n" : ""); }
     /*public void displayWriteLog(Exception e) {
