@@ -214,9 +214,12 @@ public class helloWorld extends TelegramLongPollingBot {
     public void trimWordList() {
         int index = exclude.indexOf(id);
         boolean endFile = !exclude.substring(index).contains("\n");
-        int endPoint = endFile
-                ? exclude.length()
-                : exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length();
+        int endPoint;
+        if (endFile) {
+            endPoint = exclude.length();
+        } else {
+            endPoint = exclude.substring(index).indexOf("\n") + exclude.substring(0, index).length();
+        }
         String cropped = exclude.substring(index, endPoint);
         //ріже файл exclude.txt від id чату(включно) до \n, тобто доки не закінчиться рядок зі словами
         //якщо \n немає(кінець файлу), то бере до кінця файлу
@@ -301,7 +304,7 @@ public class helloWorld extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
-        return admin[0] || id.equals(String.valueOf(message.getChatId()));
+        return admin[0] || id.equals(String.valueOf(message.getFrom().getId()));
     }
     public void appendLog(int num) { log.append(kacap || send ? num + " " + kacap + " " + send + "\n" : ""); }
     /*public void displayWriteLog(Exception e) {
