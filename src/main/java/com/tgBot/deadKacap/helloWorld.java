@@ -1,6 +1,5 @@
 package com.tgBot.deadKacap;
 
-import com.ibm.icu.text.Transliterator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -31,6 +30,7 @@ public class helloWorld extends TelegramLongPollingBot {
     boolean enabled = true;
     boolean isForward = false;
     boolean forwardEnabled = true;
+    boolean silentEnabled = false;
     boolean tenMinutes = false;
     SendMessage sm;
     DeleteMessage dm;
@@ -40,9 +40,10 @@ public class helloWorld extends TelegramLongPollingBot {
     String id;
     int messageId;
     String text;
-    String toggle = db.selectAll("toggle", false);
-    String forward = db.selectAll("forward", false);
+    String toggle = db.selectAll("toggle");
+    String forward = db.selectAll("forward");
     String exclude = db.selectAll("exclude", true);
+    String silent = db.selectAll("silent");
     StringBuilder log = new StringBuilder();
 
     @Override
@@ -69,6 +70,7 @@ public class helloWorld extends TelegramLongPollingBot {
             enabled = !toggle.contains(id);
             isForward = message.getForwardDate() != null;
             forwardEnabled = !forward.contains(id);
+            silentEnabled = silent.contains(id);
             text = (message.getText() != null ? message.getText()
                     : message.getCaption() != null ? message.getCaption() : "")
                     .toLowerCase();
@@ -97,7 +99,7 @@ public class helloWorld extends TelegramLongPollingBot {
                     System.out.println("checkWords " + System.currentTimeMillis());
                     if (log.substring(log.indexOf("\n") + 1).contains(" true") && chatUsername != null) {
                         System.out.print(log);
-                        append("log.txt", log.toString());
+                        append(log.toString());
                     }
                 }
             }
@@ -109,16 +111,16 @@ public class helloWorld extends TelegramLongPollingBot {
                     execute(dm);
                     System.out.println("execute dm " + System.currentTimeMillis());
                 }
-                if (send && !tenMinutes) {
+                if (send && !silentEnabled && !tenMinutes) {
                     execute(sm);
                     System.out.println("execute sm " + System.currentTimeMillis());
                 }
             } catch (TelegramApiException e) {
                 if (e.getMessage().contains("have no rights to send a message")
-                || e.getMessage().contains("message can't be deleted")) {
+                        || e.getMessage().contains("message can't be deleted")) {
                     send = setText(
                             "помилка видалення! можливо, не надано прав на видалення повідомлень.\n" +
-                            "надайте мені права на видалення або вимкніть мене: /toggle");
+                                    "надайте мені права на видалення або вимкніть мене: /toggle");
                     try {
                         if (send && !tenMinutes) {
                             execute(sm);
@@ -138,78 +140,92 @@ public class helloWorld extends TelegramLongPollingBot {
         sm.setChatId(id);
         return true;
     }
-    public static void append(String file, String input) {
+    public static void append(String input) {
         try {
-            Files.write(Path.of(file), input.getBytes(), StandardOpenOption.APPEND);
+            Files.write(Path.of("log.txt"), input.getBytes(), StandardOpenOption.APPEND);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
     public void setCommands() {
-        if (equalsCommand("start")) {
+        if (text.equals(cmd("start"))) {
             send = setText("привіт! я запущений і прямо зараз працюю!\n"
                     + (!enabled ? "бота вимкнено! щоб увімкнути: /toggle"
                     : "доступні команди:\n" +
                     "/toggle - увімкнути/вимкнути бота\n" +
                     "/exclude - виключити непотрібні слова\n" +
-                    "/forward - увімкнути/вимкнути видалення пересланих повідомлень\n"));
+                    "/silent - увімкнути/вимкнути відправлення інформації про видалене повідомлення\n" +
+                    "/forward - увімкнути/вимкнути видалення пересланих повідомлень"));
         } else if (isAdmin()) {
-            boolean eqToggle = equalsCommand("toggle");
-            boolean eqExclude = equalsCommand("exclude");
+            boolean eqToggle = text.equals(cmd("toggle"));
+            boolean eqForward = text.equals(cmd("forward"));
+            boolean eqSilent = text.equals(cmd("silent"));
+            boolean eqExclude = text.equals(cmd("exclude"));
             boolean stExclude = text.startsWith("/exclude ");
-            boolean eqForward = equalsCommand("forward");
-            if (eqToggle && enabled) {
-                db.insert("toggle", id);
-                toggle = db.selectAll("toggle", false);
-            } else if (eqToggle) {
-                db.delete("toggle", id);
-                toggle = db.selectAll("toggle", false);
-            } else if (eqForward) {
-                if (forward.contains(id)) {
-                    db.delete("forward", id);
-                    forward = db.selectAll("forward", false);
+            if (eqToggle) {
+                dbEdit("toggle", enabled);
+                toggle = db.selectAll("toggle");
+            }
+            if (eqForward) {
+                dbEdit("forward", forwardEnabled);
+                forward = db.selectAll("forward");
+            }
+            if (eqSilent) {
+                dbEdit("silent", !silentEnabled);
+                silent = db.selectAll("silent");
+            }
+            if (stExclude) {
+                String data = text.replace(cmd("exclude") + " ", "");
+                if (exclude.contains(id)) {
+                    db.delete("exclude", id);
+                    if (!text.equals(cmd("exclude") + " .")) {
+                        db.insert("exclude", id, data);
+                    }
                 } else {
-                    db.insert("forward", id);
-                    forward = db.selectAll("forward", false);
+                    db.insert("exclude", id, data);
                 }
-            } else if (stExclude && exclude.contains(id)) {
-                db.delete("exclude", id);
-                exclude = db.selectAll("exclude", true);
-            } else if (stExclude) {
-                db.insert("exclude", id, text.replace(command("exclude"), ""));
                 exclude = db.selectAll("exclude", true);
             }
 
-            enabled = (!stExclude || !exclude.contains(id)) && enabled;
-
             String getText =
                     eqToggle
-                    ? "бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! "
-                    + "щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle"
+                            ? "бота " + (enabled ? "вимкнено" : "увімкнено") + " в чаті! "
+                            + "щоб " + (enabled ? "увімкнути" : "вимкнути") + " знову: /toggle"
 
-                    : eqExclude
-                    ? "/exclude - команда, яка дозволяє виключати непотрібні вам слова в чаті.\n\n"
-                    + "використання команди: /exclude слово1 слово2\n"
-                    + "приклади:\n/exclude привет\n/exclude привет кто почему\n\n"
-                    + "щоб видалити всі виключення:\n/exclude ."
+                            : eqExclude
+                            ? "/exclude - команда, яка дозволяє виключати непотрібні вам слова в чаті.\n\n"
+                            + "використання команди: /exclude слово1 слово2\n"
+                            + "приклади:\n/exclude привет\n/exclude привет кто почему\n\n"
+                            + "щоб видалити всі виключення:\n/exclude ."
 
-                    : stExclude
-                    ? "виключення записано!"
+                            : stExclude
+                            ? "виключення записано!"
 
-                    : eqForward
-                    ? "видалення пересилань " + (forwardEnabled ? "вимкнено" : "увімкнено") + " в чаті! "
-                    + "щоб " + (forwardEnabled ? "увімкнути" : "вимкнути") + " знову: /forward"
+                            : eqForward
+                            ? "видалення пересилань " + (forwardEnabled ? "вимкнено" : "увімкнено") + " в чаті! "
+                            + "щоб " + (forwardEnabled ? "увімкнути" : "вимкнути") + " знову: /forward"
 
-                    : "";
+                            : eqSilent
+                            ? "відправлення інформації " + (silentEnabled ? "увімкнено" : "вимкнено") + " в чаті! " +
+                            "щоб " + (silentEnabled ? "увімкнути" : "вимкнути") + " знову: /silent"
 
-            send = !Objects.equals(getText, "") ? setText(getText) : send;
+                            : "";
+
+            if (!getText.equals("")) {
+                send = setText(getText);
+            }
+        }
+        silentEnabled = false;
+    }
+    public void dbEdit(String table, boolean condition) {
+        if (condition) {
+            db.insert(table, id);
+        } else {
+            db.delete(table, id);
         }
     }
-    public String command(String cmd) {
-        return "/" + cmd + (text.contains("@deadkacapbot") ? "@deadkacapbot " : " ");
-    }
-    public boolean equalsCommand(String command) {
-        return text.equals("/" + command) || text.equals("/" + command + "@deadkacapbot");
+    public String cmd(String input) {
+        return "/" + input + (text.contains("@deadkacapbot") ? "@deadkacapbot" : "");
     }
     public void trimWordList() {
         int index = exclude.indexOf(id);
@@ -278,7 +294,7 @@ public class helloWorld extends TelegramLongPollingBot {
     public void checkWords() {
         int j = 0;
         String[] inputsContains = {"слава Україні".toLowerCase(), "слава нації", "кацапи",
-        "путін", "путин", "путлер", "путлєр"};
+                "путін", "путин", "путлер", "путлєр"};
         String[] outputsContains = {"героям слава!", "смерть кацапам!", "кацапи - нелюди!", "путін - хуйло! кацапи - нелюди!"};
         for (int i = 0; i < inputsContains.length; i++) {
             send = text.contains(inputsContains[i]) ? setText(outputsContains[j]) : send;
@@ -304,8 +320,6 @@ public class helloWorld extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
-        System.out.println(id);
-        System.out.println(message.getFrom().getId());
         if (message.getFrom().getId().equals(1087968824L)) {
             admin[0] = true;
         }
@@ -328,23 +342,24 @@ public class helloWorld extends TelegramLongPollingBot {
         append("log.txt", error);
     }*/
     static String[] kacapWordsList = (
-    "э ы ъ ё ьі " +
-    "заебись ебат ебал тупой пидорас пидарас нихуя хуел еблан хуеть привет здаров здравствуй спасибо слуша " +
-    "работ свободн почему тогда когда только почт пример русс росси понял далее запрет добавь другой совсем " +
-    "понятн брос освобо согл хотел наверн мальчик девочк здрасте надеюс вреш скольк поздр разговари нрав слуша " +
-    "удобн смотр общ админ делать делай извини удали наконец сложн ребят хохол хохл аниме нафиг").split(" ");
+            "э ы ъ ё ьі " +
+                    "заебись ебат ебал тупой пидорас пидарас нихуя хуел еблан хуеть привет здаров здравствуй спасибо слуша " +
+                    "работ свободн почему тогда когда только почт пример русс росси понял далее запрет добавь другой совсем " +
+                    "понятн брос освобо согл хотел наверн мальчик девочк здрасте надеюс вреш скольк поздр разговари нрав слуша " +
+                    "удобн смотр общ админ делать делай извини удали наконец сложн ребят хохол хохл аниме нафиг возможн").split(" ");
     static ArrayList<String> getKacapWordsList;
     static String[] kacapWordsList2 = (
-    "да как кто никто некто его ето она оно они их еще что што пон поняв нипон непон кринж " +
-    "какой какие каких нет однако пока если меня тебя сегодня и иди потом дашь пиздец лет мне ищу надо мой твой " +
-    "свои свой зачем нужно надо всем есть ебет сейчас ща щя щас щяс либо может любой любая че чего где везде " +
-    "игра играть играю двое трое хорошо улиц улица улице пиздос пошел пошла дела дело делаешь ваще срочно " +
-    "жду ждать ждешь даже ребята пожалуйста вдруг помоги помогите помощь помог поможет помогла хуже играеш нужен будешь " +
-    "хочешь пишите умею хотя нашел нашла удачи нету живая живой года лет прости простите нечто ничто ничего " +
-    "такое такой такие такая пидр пидор пидар пидорас пидарас дебил дибил тварь время жизнь лучше короче " +
-    "понедельник вторник среда среду четверг пятница пятницу суббота субботу воскресенье").split(" ");
+            "да как кто никто некто его ето она оно они их еще что што пон поняв нипон непон кринж " +
+                    "какой какие каких нет однако пока если меня тебя сегодня и из или иди потом дашь пиздец лет мне ищу надо мой твой " +
+                    "свои свой зачем нужно надо всем есть ебет сейчас ща щя щас щяс либо может любой любая че чего где везде " +
+                    "игра играть играю двое трое хорошо улиц улица улице пиздос пошел пошла дела дело делаешь ваще срочно " +
+                    "жду ждать ждешь даже ребята пожалуйста вдруг помоги помогите помощь помог поможет помогла хуже играеш нужен будешь " +
+                    "хочешь пишите умею хотя нашел нашла удачи нету живая живой года лет прости простите нечто ничто ничего " +
+                    "такое такой такие такая пидр пидор пидар пидорас пидарас дебил дибил тварь время жизнь лучше короче " +
+                    "понедельник вторник среда среду четверг пятница пятницу суббота субботу воскресенье " +
+                    "стой стоять стоит возможен обмен очень помоги помогите помогать помогаем помогает помогаю помогают").split(" ");
     static ArrayList<String> getKacapWordsList2;
-    public static void kacapWordsListTranslit() {
+    /*static public void kacapWordsListTranslit() {
         Transliterator toLatinTrans = Transliterator.getInstance("Russian-Latin/BGN");
         for (String kacapWord : kacapWordsList) {
             System.out.print(toLatinTrans.transliterate(kacapWord) + " ");
@@ -352,7 +367,7 @@ public class helloWorld extends TelegramLongPollingBot {
         for (String kacapWord2 : kacapWordsList2) {
             System.out.print(toLatinTrans.transliterate(kacapWord2) + " ");
         }
-    }
+    }*/
     @Value("${telegram.bot.username}")
     private String username;
     @Value("${telegram.bot.token}")
@@ -395,9 +410,13 @@ class Database {
         String sql = "INSERT INTO " + table + "(chatId, data) VALUES(" + chatId + ",'" + data + "')";
         sqlExec(sql);
     }
+    public String selectAll(String table) {
+        String sql = "SELECT * FROM " + table;
+        return sqlExec(sql, false);
+    }
     public String selectAll(String table, boolean addData) {
         String sql = "SELECT * FROM " + table;
-        return sqlExec(sql, true, addData);
+        return sqlExec(sql, addData);
     }
     public void delete(String table, String chatId) {
         String sql = "DELETE FROM " + table + " WHERE chatId = " + chatId;
@@ -411,24 +430,22 @@ class Database {
             throw new RuntimeException(e);
         }
     }
-    public String sqlExec(String sql, boolean selectAll, boolean addData) {
+    public String sqlExec(String sql, boolean addData) {
         StringBuilder result = new StringBuilder();
-        if (selectAll) {
-            try {
-                Statement stmt = conn.createStatement();
-                ResultSet rs = stmt.executeQuery(sql);
-                while (rs.next()) {
-                    result.append(rs.getString("chatId"));
-                    if (addData) {
-                        result.append(" ");
-                        result.append(rs.getString("data"));
-                    }
-                    result.append("\n");
+        try {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql);
+            while (rs.next()) {
+                result.append(rs.getString("chatId"));
+                if (addData) {
+                    result.append(" ");
+                    result.append(rs.getString("data"));
                 }
-                result.deleteCharAt(result.lastIndexOf("\n"));
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+                result.append("\n");
             }
+            result.deleteCharAt(result.lastIndexOf("\n"));
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
         return String.valueOf(result);
     }
