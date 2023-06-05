@@ -154,8 +154,8 @@ public class helloWorld extends TelegramLongPollingBot {
                     : "доступні команди:\n" +
                     "/toggle - увімкнути/вимкнути бота\n" +
                     "/exclude - виключити непотрібні слова\n" +
-                    "/silent - увімкнути/вимкнути відправлення інформації про видалене повідомлення\n" +
-                    "/forward - увімкнути/вимкнути видалення пересланих повідомлень"));
+                    "/silent - тихий режим\n" +
+                    "/forward - видалення пересланих повідомлень"));
         } else if (isAdmin()) {
             boolean eqToggle = text.equals(cmd("toggle"));
             boolean eqForward = text.equals(cmd("forward"));
@@ -178,7 +178,7 @@ public class helloWorld extends TelegramLongPollingBot {
                 String data = text.replace(cmd("exclude") + " ", "");
                 if (exclude.contains(id)) {
                     db.delete("exclude", id);
-                    if (!text.equals(cmd("exclude") + " .")) {
+                    if (!text.equals(cmd("exclude") + " .")) { //exclude .
                         db.insert("exclude", id, data);
                     }
                 } else {
@@ -206,8 +206,8 @@ public class helloWorld extends TelegramLongPollingBot {
                             + "щоб " + (forwardEnabled ? "увімкнути" : "вимкнути") + " знову: /forward"
 
                             : eqSilent
-                            ? "відправлення інформації " + (silentEnabled ? "увімкнено" : "вимкнено") + " в чаті! " +
-                            "щоб " + (silentEnabled ? "увімкнути" : "вимкнути") + " знову: /silent"
+                            ? "тихий режим " + (silentEnabled ? "увімкнено" : "вимкнено") + " в чаті! " +
+                            "щоб " + (silentEnabled ? "вимкнути" : "увімкнути") + " знову: /silent"
 
                             : "";
 
