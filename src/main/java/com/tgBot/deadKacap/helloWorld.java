@@ -112,6 +112,9 @@ public class helloWorld extends TelegramLongPollingBot {
                     System.out.println("execute dm " + System.currentTimeMillis());
                 }
                 if (send && !silentEnabled && !tenMinutes) {
+                    if (new Random().nextInt(5) == 0) {
+                        send = setText(sm.getText() + "\n❗\uFE0Fбот стане іншим 24 липня. деталі -> @DeadKacapLegacy");
+                    }
                     execute(sm);
                     System.out.println("execute sm " + System.currentTimeMillis());
                 }
